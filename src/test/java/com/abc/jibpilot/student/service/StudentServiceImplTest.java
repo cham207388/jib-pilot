@@ -1,12 +1,13 @@
 package com.abc.jibpilot.student.service;
 
-import com.abc.jibpilot.course.dto.CourseSummaryDto;
+import com.abc.jibpilot.course.dto.CourseSummaryResponse;
 import com.abc.jibpilot.course.entity.Course;
 import com.abc.jibpilot.course.exception.CourseNotFoundException;
 import com.abc.jibpilot.course.repository.CourseRepository;
 import com.abc.jibpilot.auth.repository.UserRepository;
-import com.abc.jibpilot.student.dto.StudentRequestDto;
-import com.abc.jibpilot.student.dto.StudentResponseDto;
+import com.abc.jibpilot.student.dto.CreateStudentRequest;
+import com.abc.jibpilot.student.dto.StudentResponse;
+import com.abc.jibpilot.student.dto.UpdateStudentRequest;
 import com.abc.jibpilot.student.entity.Student;
 import com.abc.jibpilot.student.exception.StudentNotFoundException;
 import com.abc.jibpilot.student.repository.StudentRepository;
@@ -59,7 +60,7 @@ class StudentServiceImplTest {
 
     @Test
     void createStudent_withCourses_resolvesCoursesAndSaves() {
-        StudentRequestDto request = new StudentRequestDto("John", "Doe", "john@example.com", Set.of(1L, 2L));
+        CreateStudentRequest request = new CreateStudentRequest("John", "Doe", "john@example.com", Set.of(1L, 2L));
         when(courseRepository.findAllById(Set.of(1L, 2L))).thenReturn(List.of(course1, course2));
         when(studentRepository.save(any(Student.class))).thenAnswer(invocation -> {
             Student s = invocation.getArgument(0);
@@ -67,11 +68,11 @@ class StudentServiceImplTest {
             return s;
         });
 
-        StudentResponseDto response = studentService.createStudent(request);
+        StudentResponse response = studentService.createStudent(request);
 
         assertThat(response.id()).isEqualTo(10L);
         assertThat(response.courses())
-                .extracting(CourseSummaryDto::id)
+                .extracting(CourseSummaryResponse::id)
                 .containsExactlyInAnyOrder(1L, 2L);
         verify(studentRepository).save(any(Student.class));
     }
@@ -81,7 +82,7 @@ class StudentServiceImplTest {
         when(studentRepository.findByEmail("dup@example.com")).thenReturn(Optional.of(new Student()));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                studentService.createStudent(new StudentRequestDto("John", "Doe", "dup@example.com", null)));
+                studentService.createStudent(new CreateStudentRequest("John", "Doe", "dup@example.com", null)));
 
         assertThat(ex.getStatusCode()).isEqualTo(CONFLICT);
     }
@@ -91,7 +92,7 @@ class StudentServiceImplTest {
         when(studentRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(StudentNotFoundException.class, () ->
-                studentService.updateStudent(99L, new StudentRequestDto("A", "B", "a@b.com", null)));
+                studentService.updateStudent(99L, new UpdateStudentRequest("A", "B", "a@b.com", null)));
     }
 
     @Test
@@ -107,9 +108,9 @@ class StudentServiceImplTest {
         when(courseRepository.findById(2L)).thenReturn(Optional.of(course2));
         when(studentRepository.save(any(Student.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        StudentResponseDto response = studentService.enrollStudentInCourse(5L, 2L);
+        StudentResponse response = studentService.enrollStudentInCourse(5L, 2L);
 
-        assertThat(response.courses()).extracting(CourseSummaryDto::id).containsExactly(2L);
+        assertThat(response.courses()).extracting(CourseSummaryResponse::id).containsExactly(2L);
         assertThat(course2.getStudents()).contains(student);
     }
 
@@ -135,7 +136,7 @@ class StudentServiceImplTest {
         course1.setStudents(Set.of(student));
         when(courseRepository.findById(1L)).thenReturn(Optional.of(course1));
 
-        List<StudentResponseDto> result = studentService.getStudentsByCourse(1L);
+        List<StudentResponse> result = studentService.getStudentsByCourse(1L);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).email()).isEqualTo("test@example.com");
@@ -143,7 +144,7 @@ class StudentServiceImplTest {
 
     @Test
     void createStudent_missingCourseId_throwsNotFoundWithMissingId() {
-        StudentRequestDto request = new StudentRequestDto("John", "Doe", "john@example.com", Set.of(1L, 99L));
+        CreateStudentRequest request = new CreateStudentRequest("John", "Doe", "john@example.com", Set.of(1L, 99L));
         when(courseRepository.findAllById(Set.of(1L, 99L))).thenReturn(List.of(course1));
 
         CourseNotFoundException ex = assertThrows(CourseNotFoundException.class, () -> studentService.createStudent(request));

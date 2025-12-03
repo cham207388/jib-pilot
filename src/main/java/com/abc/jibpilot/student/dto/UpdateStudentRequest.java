@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 
 import java.util.Set;
 
-public record StudentRequestDto(
+public record UpdateStudentRequest(
         @NotBlank(message = "First name is required")
         String firstName,
 

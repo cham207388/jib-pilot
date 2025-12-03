@@ -1,12 +1,13 @@
 package com.abc.jibpilot.student.service;
 
-import com.abc.jibpilot.course.dto.CourseSummaryDto;
+import com.abc.jibpilot.course.dto.CourseSummaryResponse;
 import com.abc.jibpilot.course.entity.Course;
 import com.abc.jibpilot.course.exception.CourseNotFoundException;
 import com.abc.jibpilot.course.repository.CourseRepository;
 import com.abc.jibpilot.auth.repository.UserRepository;
-import com.abc.jibpilot.student.dto.StudentRequestDto;
-import com.abc.jibpilot.student.dto.StudentResponseDto;
+import com.abc.jibpilot.student.dto.CreateStudentRequest;
+import com.abc.jibpilot.student.dto.StudentResponse;
+import com.abc.jibpilot.student.dto.UpdateStudentRequest;
 import com.abc.jibpilot.student.entity.Student;
 import com.abc.jibpilot.student.exception.StudentNotFoundException;
 import com.abc.jibpilot.student.repository.StudentRepository;
@@ -32,7 +33,7 @@ public class StudentServiceImpl implements StudentService {
     private final UserRepository userRepository;
 
     @Override
-    public StudentResponseDto createStudent(StudentRequestDto request) {
+    public StudentResponse createStudent(CreateStudentRequest request) {
         ensureEmailIsUnique(request.email(), null);
 
         Student student = Student.builder()
@@ -47,7 +48,7 @@ public class StudentServiceImpl implements StudentService {
 
     @Override
     @Transactional(readOnly = true)
-    public StudentResponseDto getStudent(Long id) {
+    public StudentResponse getStudent(Long id) {
         return studentRepository.findById(id)
                 .map(this::toResponse)
                 .orElseThrow(() -> new StudentNotFoundException(id));
@@ -55,7 +56,7 @@ public class StudentServiceImpl implements StudentService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<StudentResponseDto> getAllStudents() {
+    public List<StudentResponse> getAllStudents() {
         return studentRepository.findAll()
                 .stream()
                 .map(this::toResponse)
@@ -63,7 +64,7 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public StudentResponseDto updateStudent(Long id, StudentRequestDto request) {
+    public StudentResponse updateStudent(Long id, UpdateStudentRequest request) {
         Student existing = studentRepository.findById(id)
                 .orElseThrow(() -> new StudentNotFoundException(id));
 
@@ -94,7 +95,7 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public StudentResponseDto enrollStudentInCourse(Long studentId, Long courseId) {
+    public StudentResponse enrollStudentInCourse(Long studentId, Long courseId) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new StudentNotFoundException(studentId));
         Course course = courseRepository.findById(courseId)
@@ -107,7 +108,7 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public StudentResponseDto removeStudentFromCourse(Long studentId, Long courseId) {
+    public StudentResponse removeStudentFromCourse(Long studentId, Long courseId) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new StudentNotFoundException(studentId));
         Course course = courseRepository.findById(courseId)
@@ -121,7 +122,7 @@ public class StudentServiceImpl implements StudentService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<StudentResponseDto> getStudentsByCourse(Long courseId) {
+    public List<StudentResponse> getStudentsByCourse(Long courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new CourseNotFoundException(courseId));
 
@@ -131,8 +132,8 @@ public class StudentServiceImpl implements StudentService {
                 .toList();
     }
 
-    private StudentResponseDto toResponse(Student student) {
-        return new StudentResponseDto(
+    private StudentResponse toResponse(Student student) {
+        return new StudentResponse(
                 student.getId(),
                 student.getFirstName(),
                 student.getLastName(),
@@ -178,9 +179,9 @@ public class StudentServiceImpl implements StudentService {
         return new HashSet<>(courses);
     }
 
-    private Set<CourseSummaryDto> toCourseSummaries(Set<Course> courses) {
+    private Set<CourseSummaryResponse> toCourseSummaries(Set<Course> courses) {
         return courses.stream()
-                .map(course -> new CourseSummaryDto(course.getId(), course.getCode(), course.getTitle()))
+                .map(course -> new CourseSummaryResponse(course.getId(), course.getCode(), course.getTitle()))
                 .collect(Collectors.toSet());
     }
 }

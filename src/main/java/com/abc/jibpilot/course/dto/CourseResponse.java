@@ -2,7 +2,7 @@ package com.abc.jibpilot.course.dto;
 
 import java.util.Set;
 
-public record CourseResponseDto(
+public record CourseResponse(
         Long id,
         String code,
         String title,

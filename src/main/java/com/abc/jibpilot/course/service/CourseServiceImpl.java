@@ -1,7 +1,8 @@
 package com.abc.jibpilot.course.service;
 
-import com.abc.jibpilot.course.dto.CourseRequestDto;
-import com.abc.jibpilot.course.dto.CourseResponseDto;
+import com.abc.jibpilot.course.dto.CourseResponse;
+import com.abc.jibpilot.course.dto.CreateCourseRequest;
+import com.abc.jibpilot.course.dto.UpdateCourseRequest;
 import com.abc.jibpilot.course.entity.Course;
 import com.abc.jibpilot.course.exception.CourseNotFoundException;
 import com.abc.jibpilot.course.repository.CourseRepository;
@@ -25,7 +26,7 @@ public class CourseServiceImpl implements CourseService {
     private final CourseRepository courseRepository;
 
     @Override
-    public CourseResponseDto createCourse(CourseRequestDto request) {
+    public CourseResponse createCourse(CreateCourseRequest request) {
         ensureCodeIsUnique(request.code(), null);
 
         Course course = Course.builder()
@@ -39,7 +40,7 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     @Transactional(readOnly = true)
-    public CourseResponseDto getCourse(Long id) {
+    public CourseResponse getCourse(Long id) {
         return courseRepository.findById(id)
                 .map(this::toResponse)
                 .orElseThrow(() -> new CourseNotFoundException(id));
@@ -47,7 +48,7 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CourseResponseDto> getAllCourses() {
+    public List<CourseResponse> getAllCourses() {
         return courseRepository.findAll()
                 .stream()
                 .map(this::toResponse)
@@ -55,7 +56,7 @@ public class CourseServiceImpl implements CourseService {
     }
 
     @Override
-    public CourseResponseDto updateCourse(Long id, CourseRequestDto request) {
+    public CourseResponse updateCourse(Long id, UpdateCourseRequest request) {
         Course course = courseRepository.findById(id)
                 .orElseThrow(() -> new CourseNotFoundException(id));
 
@@ -90,13 +91,13 @@ public class CourseServiceImpl implements CourseService {
         });
     }
 
-    private CourseResponseDto toResponse(Course course) {
+    private CourseResponse toResponse(Course course) {
         Set<Long> studentIds = course.getStudents()
                 .stream()
                 .map(Student::getId)
                 .collect(Collectors.toSet());
 
-        return new CourseResponseDto(
+        return new CourseResponse(
                 course.getId(),
                 course.getCode(),
                 course.getTitle(),

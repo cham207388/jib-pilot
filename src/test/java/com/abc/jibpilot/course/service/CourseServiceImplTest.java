@@ -1,7 +1,8 @@
 package com.abc.jibpilot.course.service;
 
-import com.abc.jibpilot.course.dto.CourseRequestDto;
-import com.abc.jibpilot.course.dto.CourseResponseDto;
+import com.abc.jibpilot.course.dto.CourseResponse;
+import com.abc.jibpilot.course.dto.CreateCourseRequest;
+import com.abc.jibpilot.course.dto.UpdateCourseRequest;
 import com.abc.jibpilot.course.entity.Course;
 import com.abc.jibpilot.course.exception.CourseNotFoundException;
 import com.abc.jibpilot.course.repository.CourseRepository;
@@ -53,7 +54,7 @@ class CourseServiceImplTest {
         when(courseRepository.findByCode("CS101")).thenReturn(Optional.of(course));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                courseService.createCourse(new CourseRequestDto("CS101", "Title", "Desc")));
+                courseService.createCourse(new CreateCourseRequest("CS101", "Title", "Desc")));
 
         assertThat(ex.getStatusCode()).isEqualTo(CONFLICT);
     }
@@ -70,7 +71,7 @@ class CourseServiceImplTest {
         when(courseRepository.findById(1L)).thenReturn(Optional.of(course));
         when(courseRepository.save(any(Course.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        CourseResponseDto response = courseService.updateCourse(1L, new CourseRequestDto("CS201", "Advanced", "More"));
+        CourseResponse response = courseService.updateCourse(1L, new UpdateCourseRequest("CS201", "Advanced", "More"));
 
         assertThat(response.code()).isEqualTo("CS201");
         assertThat(response.title()).isEqualTo("Advanced");
@@ -92,7 +93,7 @@ class CourseServiceImplTest {
     void getAllCourses_returnsMappedDtos() {
         when(courseRepository.findAll()).thenReturn(List.of(course));
 
-        List<CourseResponseDto> responses = courseService.getAllCourses();
+        List<CourseResponse> responses = courseService.getAllCourses();
 
         assertThat(responses).hasSize(1);
         assertThat(responses.get(0).code()).isEqualTo("CS101");

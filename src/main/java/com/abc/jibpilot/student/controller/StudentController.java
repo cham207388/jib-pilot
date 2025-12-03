@@ -1,7 +1,8 @@
 package com.abc.jibpilot.student.controller;
 
-import com.abc.jibpilot.student.dto.StudentRequestDto;
-import com.abc.jibpilot.student.dto.StudentResponseDto;
+import com.abc.jibpilot.student.dto.CreateStudentRequest;
+import com.abc.jibpilot.student.dto.StudentResponse;
+import com.abc.jibpilot.student.dto.UpdateStudentRequest;
 import com.abc.jibpilot.student.service.StudentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,27 +31,27 @@ public class StudentController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<StudentResponseDto> createStudent(@Valid @RequestBody StudentRequestDto request) {
-        StudentResponseDto created = studentService.createStudent(request);
+    public ResponseEntity<StudentResponse> createStudent(@Valid @RequestBody CreateStudentRequest request) {
+        StudentResponse created = studentService.createStudent(request);
         return ResponseEntity.created(URI.create("/api/v1/students/" + created.id())).body(created);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("@securityGuard.canAccessStudent(#id)")
-    public ResponseEntity<StudentResponseDto> getStudent(@PathVariable Long id) {
+    public ResponseEntity<StudentResponse> getStudent(@PathVariable Long id) {
         return ResponseEntity.ok(studentService.getStudent(id));
     }
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<StudentResponseDto>> getAllStudents() {
+    public ResponseEntity<List<StudentResponse>> getAllStudents() {
         return ResponseEntity.ok(studentService.getAllStudents());
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("@securityGuard.canAccessStudent(#id)")
-    public ResponseEntity<StudentResponseDto> updateStudent(@PathVariable Long id,
-                                                            @Valid @RequestBody StudentRequestDto request) {
+    public ResponseEntity<StudentResponse> updateStudent(@PathVariable Long id,
+                                                         @Valid @RequestBody UpdateStudentRequest request) {
         return ResponseEntity.ok(studentService.updateStudent(id, request));
     }
 
@@ -63,13 +64,13 @@ public class StudentController {
 
     @PostMapping("/{studentId}/courses/{courseId}")
     @PreAuthorize("@securityGuard.canAccessStudent(#studentId)")
-    public ResponseEntity<StudentResponseDto> enrollInCourse(@PathVariable Long studentId, @PathVariable Long courseId) {
+    public ResponseEntity<StudentResponse> enrollInCourse(@PathVariable Long studentId, @PathVariable Long courseId) {
         return ResponseEntity.ok(studentService.enrollStudentInCourse(studentId, courseId));
     }
 
     @DeleteMapping("/{studentId}/courses/{courseId}")
     @PreAuthorize("@securityGuard.canAccessStudent(#studentId)")
-    public ResponseEntity<StudentResponseDto> dropCourse(@PathVariable Long studentId, @PathVariable Long courseId) {
+    public ResponseEntity<StudentResponse> dropCourse(@PathVariable Long studentId, @PathVariable Long courseId) {
         return ResponseEntity.ok(studentService.removeStudentFromCourse(studentId, courseId));
     }
 }

@@ -3,7 +3,7 @@ package com.abc.jibpilot.course.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public record CourseRequestDto(
+public record CreateCourseRequest(
         @NotBlank(message = "Course code is required")
         String code,
 

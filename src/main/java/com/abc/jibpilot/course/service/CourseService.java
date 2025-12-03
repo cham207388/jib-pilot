@@ -1,18 +1,19 @@
 package com.abc.jibpilot.course.service;
 
-import com.abc.jibpilot.course.dto.CourseRequestDto;
-import com.abc.jibpilot.course.dto.CourseResponseDto;
+import com.abc.jibpilot.course.dto.CourseResponse;
+import com.abc.jibpilot.course.dto.CreateCourseRequest;
+import com.abc.jibpilot.course.dto.UpdateCourseRequest;
 
 import java.util.List;
 
 public interface CourseService {
-    CourseResponseDto createCourse(CourseRequestDto request);
+    CourseResponse createCourse(CreateCourseRequest request);
 
-    CourseResponseDto getCourse(Long id);
+    CourseResponse getCourse(Long id);
 
-    List<CourseResponseDto> getAllCourses();
+    List<CourseResponse> getAllCourses();
 
-    CourseResponseDto updateCourse(Long id, CourseRequestDto request);
+    CourseResponse updateCourse(Long id, UpdateCourseRequest request);
 
     void deleteCourse(Long id);
 }

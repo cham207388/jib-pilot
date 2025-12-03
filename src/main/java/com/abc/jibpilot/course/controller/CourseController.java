@@ -1,9 +1,10 @@
 package com.abc.jibpilot.course.controller;
 
-import com.abc.jibpilot.course.dto.CourseRequestDto;
-import com.abc.jibpilot.course.dto.CourseResponseDto;
+import com.abc.jibpilot.course.dto.CourseResponse;
+import com.abc.jibpilot.course.dto.CreateCourseRequest;
+import com.abc.jibpilot.course.dto.UpdateCourseRequest;
 import com.abc.jibpilot.course.service.CourseService;
-import com.abc.jibpilot.student.dto.StudentResponseDto;
+import com.abc.jibpilot.student.dto.StudentResponse;
 import com.abc.jibpilot.student.service.StudentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,27 +34,27 @@ public class CourseController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CourseResponseDto> createCourse(@Valid @RequestBody CourseRequestDto request) {
-        CourseResponseDto created = courseService.createCourse(request);
+    public ResponseEntity<CourseResponse> createCourse(@Valid @RequestBody CreateCourseRequest request) {
+        CourseResponse created = courseService.createCourse(request);
         return ResponseEntity.created(URI.create("/api/v1/courses/" + created.id())).body(created);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','STUDENT')")
-    public ResponseEntity<CourseResponseDto> getCourse(@PathVariable Long id) {
+    public ResponseEntity<CourseResponse> getCourse(@PathVariable Long id) {
         return ResponseEntity.ok(courseService.getCourse(id));
     }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','STUDENT')")
-    public ResponseEntity<List<CourseResponseDto>> getAllCourses() {
+    public ResponseEntity<List<CourseResponse>> getAllCourses() {
         return ResponseEntity.ok(courseService.getAllCourses());
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CourseResponseDto> updateCourse(@PathVariable Long id,
-                                                          @Valid @RequestBody CourseRequestDto request) {
+    public ResponseEntity<CourseResponse> updateCourse(@PathVariable Long id,
+                                                       @Valid @RequestBody UpdateCourseRequest request) {
         return ResponseEntity.ok(courseService.updateCourse(id, request));
     }
 
@@ -66,7 +67,7 @@ public class CourseController {
 
     @GetMapping("/{id}/students")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<StudentResponseDto>> getStudentsForCourse(@PathVariable Long id) {
+    public ResponseEntity<List<StudentResponse>> getStudentsForCourse(@PathVariable Long id) {
         return ResponseEntity.ok(studentService.getStudentsByCourse(id));
     }
 }

@@ -1,6 +1,6 @@
 package com.abc.jibpilot.course.dto;
 
-public record CourseSummaryDto(
+public record CourseSummaryResponse(
         Long id,
         String code,
         String title

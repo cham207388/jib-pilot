@@ -1,24 +1,25 @@
 package com.abc.jibpilot.student.service;
 
-import com.abc.jibpilot.student.dto.StudentRequestDto;
-import com.abc.jibpilot.student.dto.StudentResponseDto;
+import com.abc.jibpilot.student.dto.CreateStudentRequest;
+import com.abc.jibpilot.student.dto.StudentResponse;
+import com.abc.jibpilot.student.dto.UpdateStudentRequest;
 
 import java.util.List;
 
 public interface StudentService {
-    StudentResponseDto createStudent(StudentRequestDto request);
+    StudentResponse createStudent(CreateStudentRequest request);
 
-    StudentResponseDto getStudent(Long id);
+    StudentResponse getStudent(Long id);
 
-    List<StudentResponseDto> getAllStudents();
+    List<StudentResponse> getAllStudents();
 
-    StudentResponseDto updateStudent(Long id, StudentRequestDto request);
+    StudentResponse updateStudent(Long id, UpdateStudentRequest request);
 
     void deleteStudent(Long id);
 
-    StudentResponseDto enrollStudentInCourse(Long studentId, Long courseId);
+    StudentResponse enrollStudentInCourse(Long studentId, Long courseId);
 
-    StudentResponseDto removeStudentFromCourse(Long studentId, Long courseId);
+    StudentResponse removeStudentFromCourse(Long studentId, Long courseId);
 
-    List<StudentResponseDto> getStudentsByCourse(Long courseId);
+    List<StudentResponse> getStudentsByCourse(Long courseId);
 }

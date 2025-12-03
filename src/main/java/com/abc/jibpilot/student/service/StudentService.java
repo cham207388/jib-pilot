@@ -15,4 +15,10 @@ public interface StudentService {
     StudentResponseDto updateStudent(Long id, StudentRequestDto request);
 
     void deleteStudent(Long id);
+
+    StudentResponseDto enrollStudentInCourse(Long studentId, Long courseId);
+
+    StudentResponseDto removeStudentFromCourse(Long studentId, Long courseId);
+
+    List<StudentResponseDto> getStudentsByCourse(Long courseId);
 }

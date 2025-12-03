@@ -1,0 +1,89 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.0.0'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'com.google.cloud.tools.jib' version '3.4.2'
+}
+
+group = 'com.abc'
+version = '0.0.1'
+description = 'jib-pilot'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// Jib configuration
+jib {
+    from {
+        image = 'eclipse-temurin:21-jre-alpine'
+    }
+    to {
+        image = 'baicham/jib-pilot'
+        // Tags can be set via JIB_TAGS environment variable (comma-separated) or property
+        // Default: [project.version, 'latest']
+        def customTags = project.findProperty('jibTags') ?: System.getenv('JIB_TAGS')
+        tags = customTags ? customTags.split(',').collect { it.trim() } : [project.version, 'latest']
+        // Only configure auth if credentials are provided
+        def dockerHubUsername = project.findProperty('dockerHubUsername') ?: System.getenv('DOCKER_HUB_USERNAME')
+        def dockerHubPassword = project.findProperty('dockerHubPassword') ?: System.getenv('DOCKER_HUB_PASSWORD')
+        if (dockerHubUsername && dockerHubPassword) {
+            auth {
+                username = dockerHubUsername
+                password = dockerHubPassword
+            }
+        }
+    }
+    container {
+        mainClass = 'com.abc.jibpilot.JibPilotApplication'
+        jvmFlags = [
+                '-XX:+UseContainerSupport',
+                '-XX:MaxRAMPercentage=75.0',
+                '-Djava.security.egd=file:/dev/./urandom'
+        ]
+        ports = ['8080']
+        environment = [
+                'SPRING_PROFILES_ACTIVE': 'prod'
+        ]
+        creationTime = 'USE_CURRENT_TIMESTAMP'
+        format = 'OCI'
+    }
+    // Optimize layer caching for Spring Boot
+    extraDirectories {
+        paths {
+            path {
+                from = file('src/main/resources')
+                into = '/app/resources'
+            }
+        }
+        permissions = [
+                '/app/resources': '755'
+        ]
+    }
+    // Configure for Spring Boot fat JAR
+    containerizingMode = 'packaged'
+}

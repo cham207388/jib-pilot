@@ -35,6 +35,8 @@
 
 ## Build & Run
 - Local run: `docker compose up -d` (DB), then `./gradlew bootRun`.
+- Container run: `./gradlew jibDockerBuild` then `docker compose up -d` (uses app image `baicham/jib-pilot:latest`).
+- Dev compose: `docker compose -f docker-compose.dev.yml up --build` (bind-mounts repo, runs `./gradlew bootRun` for hot reload; includes its own Postgres and a strong default JWT secret).
 - Tests: `./gradlew test` (uses H2).
 - Container image: `./gradlew jib` (push with Docker Hub creds/env vars).
 
@@ -42,3 +44,5 @@
 - Update `app.security.jwt.secret` and admin credentials for real environments.
 - Email uniqueness enforced across Student and UserAccount.
 - DTO naming: requests use `Create/Update...Request`, responses use `...Response`.
+- Compose JWT secret is currently set to a strong random value; change it for your own deployment.
+- Docker CLI not required in containers: `SPRING_DOCKER_COMPOSE_ENABLED` set to false in compose files to avoid Spring Boot trying to start Docker.

@@ -8,6 +8,7 @@ import com.abc.jibpilot.student.dto.StudentResponse;
 import com.abc.jibpilot.student.service.StudentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -23,9 +24,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.net.URI;
 import java.util.List;
 
+@Slf4j
 @RestController
-@RequestMapping("/api/v1/courses")
 @RequiredArgsConstructor
+@RequestMapping("/api/v1/courses")
 @SecurityRequirement(name = "bearerAuth")
 public class CourseController {
 
@@ -35,6 +37,7 @@ public class CourseController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CourseResponse> createCourse(@Valid @RequestBody CreateCourseRequest request) {
+        log.info("Creating course: {}", request);
         CourseResponse created = courseService.createCourse(request);
         return ResponseEntity.created(URI.create("/api/v1/courses/" + created.id())).body(created);
     }

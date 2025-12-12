@@ -47,8 +47,8 @@ dependencies {
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
-    // Ensure test autoconfigure artifacts (provides WebMvcTest, AutoConfigureMockMvc, etc.) are present
-    testImplementation 'org.springframework.boot:spring-boot-test-autoconfigure:4.0.0'
+    testImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
+    testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'com.h2database:h2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

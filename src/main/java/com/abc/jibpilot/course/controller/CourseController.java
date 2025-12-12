@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.List;
@@ -36,10 +37,16 @@ public class CourseController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CourseResponse> createCourse(@Valid @RequestBody CreateCourseRequest request) {
+    public ResponseEntity<Void> createCourse(@Valid @RequestBody CreateCourseRequest request) {
         log.info("Creating course: {}", request);
-        CourseResponse created = courseService.createCourse(request);
-        return ResponseEntity.created(URI.create("/api/v1/courses/" + created.id())).body(created);
+        CourseResponse createdCourse = courseService.createCourse(request);
+        URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/api/v1/courses/{id}")
+                .buildAndExpand(createdCourse.id())
+                .encode()
+                .toUri();
+        // Return 201 with Location header only; avoid returning the created entity to prevent reflection
+        return ResponseEntity.created(location).build();
     }
 
     @GetMapping("/{id}")

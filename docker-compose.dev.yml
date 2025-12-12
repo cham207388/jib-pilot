@@ -1,0 +1,34 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/workspace
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/jib_pilot
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      APP_SECURITY_JWT_SECRET: ${APP_SECURITY_JWT_SECRET:-5f6d2c4d2ef2a6a06c8f3197fceecc4430ebdcaf149048393ca5c7d07212e726a3f8d1dfbfc3d6de2d98e81d1e7843161620eb51979c7e19d58e33e207e3cbe9}
+      APP_ADMIN_EMAIL: admin@example.com
+      APP_ADMIN_PASSWORD: ChangeMe123!
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: jib_pilot
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

@@ -27,6 +27,14 @@ app:
   admin:
     email: admin@example.com
     password: ChangeMe123!
+  rate-limiting:
+    enabled: true
+    auth:
+      requests-per-minute: 5
+    public:
+      requests-per-minute: 100
+    authenticated:
+      requests-per-minute: 1000
 
 management:
   endpoints:

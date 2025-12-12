@@ -3,6 +3,7 @@ package com.abc.jibpilot.student.controller;
 import com.abc.jibpilot.auth.filter.JwtAuthenticationFilter;
 import com.abc.jibpilot.auth.service.JwtService;
 import com.abc.jibpilot.course.dto.CourseSummaryResponse;
+import com.abc.jibpilot.ratelimit.RateLimitingFilter;
 import com.abc.jibpilot.security.SecurityGuard;
 import com.abc.jibpilot.student.dto.CreateStudentRequest;
 import com.abc.jibpilot.student.dto.StudentResponse;
@@ -55,6 +56,9 @@ class StudentControllerTest {
 
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @MockitoBean
+    private RateLimitingFilter rateLimitingFilter;
 
     @Test
     @WithMockUser(roles = "ADMIN")

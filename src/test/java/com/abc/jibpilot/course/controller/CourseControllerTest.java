@@ -9,6 +9,7 @@ import com.abc.jibpilot.student.service.StudentService;
 import org.junit.jupiter.api.Test;
 import com.abc.jibpilot.auth.filter.JwtAuthenticationFilter;
 import com.abc.jibpilot.auth.service.JwtService;
+import com.abc.jibpilot.ratelimit.RateLimitingFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
@@ -54,6 +55,9 @@ class CourseControllerTest {
 
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @MockitoBean
+    private RateLimitingFilter rateLimitingFilter;
 
     @Test
     @WithMockUser(roles = "ADMIN")

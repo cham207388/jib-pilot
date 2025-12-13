@@ -196,7 +196,13 @@ This setup:
 
 ## API Documentation
 
+<details>
+<summary>Click to open</summary>
+
 ### Swagger UI
+
+<details>
+<summary>Click to open</summary>
 
 Interactive API documentation is available at:
 
@@ -209,6 +215,8 @@ To use Swagger UI:
 2. Navigate to the Swagger UI URL
 3. Click "Authorize" and enter your JWT token: `Bearer <your-token>`
 4. Explore and test the API endpoints
+
+</details>
 
 ### API Endpoints
 
@@ -247,10 +255,13 @@ To use Swagger UI:
 
 </details>
 
+
+</details>
+
 ## Authentication & Authorization
 
 <details>
-<summary>Authentication & Authorization</summary>
+<summary>Click to open</summary>
 
 ### Authentication Flow
 
@@ -328,6 +339,9 @@ To use Swagger UI:
 </details>
 
 ## Rate Limiting
+
+<details>
+<summary>Click to open</summary>
 
 The application implements production-ready rate limiting using **Bucket4j**, an industry-standard library for rate limiting in Java applications. Rate limiting protects the API from abuse, prevents brute force attacks, and ensures fair resource distribution.
 
@@ -472,10 +486,13 @@ app:
 
 - **Solution**: Use Spring profiles to configure different limits per environment
 
+
+</details>
+
 ## Rate Limiting Implementation Guide
 
 <details>
-<summary>Rate Limiting Implementation Guide</summary>
+<summary>Click to open</summary>
 
 This section provides a detailed technical guide on how rate limiting is implemented in this application, including architecture, key components, and customization options.
 
@@ -851,6 +868,9 @@ Potential improvements for production use:
 
 ## Actuator Endpoints
 
+<details>
+<summary>Click to open</summary>
+
 Spring Boot Actuator provides production-ready features for monitoring and managing the application. All actuator endpoints are publicly accessible at `/actuator/*`.
 
 ### Standard Actuator Endpoints
@@ -883,6 +903,8 @@ Returns the total number of users in the database.
 curl http://localhost:8085/actuator/userNumbers
 ```
 
+</details>
+
 ## Testing
 
 ### Run All Tests
@@ -901,7 +923,7 @@ The project includes comprehensive test coverage:
 
 ### Test Configuration
 
-Test-specific configuration is in `src/test/resources/application.properties`:
+Test-specific configuration is in `src/test/resources/application.yml`:
 
 - Uses H2 in-memory database
 - JWT secret configured for testing

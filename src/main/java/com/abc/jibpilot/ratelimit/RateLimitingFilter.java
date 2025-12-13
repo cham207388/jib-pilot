@@ -4,7 +4,6 @@ import com.abc.jibpilot.ratelimit.dto.RateLimitErrorResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Refill;
 import io.github.bucket4j.local.LocalBucket;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
@@ -112,7 +111,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             case NONE -> 0;
         };
 
-        Bandwidth limit = Bandwidth.classic(capacity, Refill.intervally(capacity, Duration.ofMinutes(1)));
+        Bandwidth limit = Bandwidth.builder()
+                .capacity(capacity)
+                .refillIntervally(capacity, Duration.ofMinutes(1))
+                .build();
         return Bucket.builder()
                 .addLimit(limit)
                 .build();

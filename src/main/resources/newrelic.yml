@@ -1,0 +1,7 @@
+common: &default_settings
+  license_key: ${NEW_RELIC_LICENSE_KEY}
+  app_name: jib-pilot
+  distributed_tracing:
+    enabled: true
+  log:
+    level: info

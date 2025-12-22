@@ -1,0 +1,50 @@
+name: "Enforce Commit Message Conventions"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  validate-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # Required to fetch all commits in the PR
+
+      - name: Check Commit Formats
+        run: |
+          BASE_SHA=${{ github.event.pull_request.base.sha }}
+          HEAD_SHA=${{ github.event.pull_request.head.sha }}
+          
+          # Extract subject lines of all commits in the PR
+          COMMITS=$(git log --format="%s" $BASE_SHA..$HEAD_SHA)
+          
+          REGEX_ABC="^ABC-[0-9]+: .+"
+          REGEX_LOVE="^[lL][oO][vV][eE]-[0-9]{4,9}[ :].+"
+          
+          FAILED=0
+          
+          echo "Scanning PR commits..."
+          while IFS= read -r COMMIT; do
+            # Ignore empty lines
+            if [ -z "$COMMIT" ]; then continue; fi
+            
+            if [[ "$COMMIT" =~ $REGEX_ABC ]] || \
+               [[ "$COMMIT" =~ $REGEX_LOVE ]]; then
+              echo "✅ Passed: $COMMIT"
+            else
+              echo "❌ Failed: $COMMIT"
+              FAILED=1
+            fi
+          done <<< "$COMMITS"
+          
+          if [ $FAILED -ne 0 ]; then
+            echo ""
+            echo "🚨 ERROR: One or more commit messages do not meet the required format."
+            echo "Please amend your commits to match one of the following rules:"
+            echo "- ABC-####: custom message"
+            echo "- Love-####: custom message (4-9 digits, case insensitive)"
+            exit 1
+          fi

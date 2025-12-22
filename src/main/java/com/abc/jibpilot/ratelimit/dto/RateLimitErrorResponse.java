@@ -6,8 +6,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 public record RateLimitErrorResponse(
         String error,
         String message,
-        Long retryAfter
-) {
+        Long retryAfter) {
     public static RateLimitErrorResponse tooManyRequests(long retryAfterSeconds) {
         return new RateLimitErrorResponse(
                 "Too Many Requests",

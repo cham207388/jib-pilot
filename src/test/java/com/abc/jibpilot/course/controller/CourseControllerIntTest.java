@@ -1,24 +1,20 @@
 package com.abc.jibpilot.course.controller;
 
+import com.abc.jibpilot.auth.filter.JwtAuthenticationFilter;
+import com.abc.jibpilot.auth.service.JwtService;
 import com.abc.jibpilot.course.dto.CourseResponse;
 import com.abc.jibpilot.course.dto.CreateCourseRequest;
 import com.abc.jibpilot.course.dto.UpdateCourseRequest;
 import com.abc.jibpilot.course.service.CourseService;
+import com.abc.jibpilot.ratelimit.RateLimitingFilter;
 import com.abc.jibpilot.student.dto.StudentResponse;
 import com.abc.jibpilot.student.service.StudentService;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import com.abc.jibpilot.auth.filter.JwtAuthenticationFilter;
-import com.abc.jibpilot.auth.service.JwtService;
-import com.abc.jibpilot.ratelimit.RateLimitingFilter;
-import com.abc.jibpilot.config.JacksonConfig;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
-import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -37,12 +33,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Tag("webmvc")
-@WebMvcTest(controllers = CourseController.class)
+@Tag("spring-boot")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc(addFilters = false)
-@ImportAutoConfiguration(JacksonAutoConfiguration.class)
-@Import(JacksonConfig.class)
-class CourseControllerTest {
+class CourseControllerIntTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -68,7 +62,6 @@ class CourseControllerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void createCourse_returnsCreatedWithLocationHeader() throws Exception {
-        System.out.println("createCourse_returnsCreatedWithLocationHeader");
         CreateCourseRequest request = new CreateCourseRequest("CS101", "Intro to CS", "Basics");
         CourseResponse response = new CourseResponse(1L, request.code(), request.title(), request.description(), Set.of());
         when(courseService.createCourse(request)).thenReturn(response);
@@ -142,3 +135,4 @@ class CourseControllerTest {
                 .andExpect(content().json(jsonMapper.writeValueAsString(responses)));
     }
 }
+

@@ -9,16 +9,12 @@ import com.abc.jibpilot.student.dto.CreateStudentRequest;
 import com.abc.jibpilot.student.dto.StudentResponse;
 import com.abc.jibpilot.student.dto.UpdateStudentRequest;
 import com.abc.jibpilot.student.service.StudentService;
-import com.abc.jibpilot.config.JacksonConfig;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
-import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -38,12 +34,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Tag("webmvc")
-@WebMvcTest(controllers = StudentController.class)
+@Tag("spring-boot")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc(addFilters = false)
-@ImportAutoConfiguration(JacksonAutoConfiguration.class)
-@Import(JacksonConfig.class)
-class StudentControllerTest {
+class StudentControllerIntTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -174,3 +168,4 @@ class StudentControllerTest {
                 .andExpect(content().json(jsonMapper.writeValueAsString(response)));
     }
 }
+

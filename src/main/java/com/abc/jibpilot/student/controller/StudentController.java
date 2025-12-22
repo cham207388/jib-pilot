@@ -1,5 +1,6 @@
 package com.abc.jibpilot.student.controller;
 
+import com.abc.jibpilot.student.dto.BulkCreateStudentRequest;
 import com.abc.jibpilot.student.dto.CreateStudentRequest;
 import com.abc.jibpilot.student.dto.StudentResponse;
 import com.abc.jibpilot.student.dto.UpdateStudentRequest;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -46,6 +48,13 @@ public class StudentController {
         return ResponseEntity.created(location).build();
     }
 
+    @PostMapping("/bulk")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<StudentResponse>> bulkCreateStudents(@Valid @RequestBody BulkCreateStudentRequest request) {
+        List<StudentResponse> createdStudents = studentService.bulkCreateStudents(request.students());
+        return ok(createdStudents);
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("@securityGuard.canAccessStudent(#id)")
     public ResponseEntity<StudentResponse> getStudent(@PathVariable Long id) {
@@ -56,6 +65,14 @@ public class StudentController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<StudentResponse>> getAllStudents() {
         return ok(studentService.getAllStudents());
+    }
+
+    @GetMapping("/search")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<StudentResponse>> searchStudents(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "20") int limit) {
+        return ok(studentService.searchStudents(q, limit));
     }
 
     @PutMapping("/{id}")

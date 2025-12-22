@@ -1,7 +1,7 @@
 package com.abc.jibpilot.ratelimit;
 
 import com.abc.jibpilot.ratelimit.dto.RateLimitErrorResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.local.LocalBucket;
@@ -26,12 +26,13 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
     private final RateLimitingConfig rateLimitingConfig;
     private final RateLimitKeyResolver keyResolver;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
 
-    public RateLimitingFilter(RateLimitingConfig rateLimitingConfig, RateLimitKeyResolver keyResolver) {
+    public RateLimitingFilter(RateLimitingConfig rateLimitingConfig, RateLimitKeyResolver keyResolver, 
+                              JsonMapper jsonMapper) {
         this.rateLimitingConfig = rateLimitingConfig;
         this.keyResolver = keyResolver;
-        this.objectMapper = new ObjectMapper();
+        this.jsonMapper = jsonMapper;
     }
 
     // In-memory storage for rate limit buckets
@@ -155,7 +156,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         response.setHeader("X-RateLimit-Reset", String.valueOf(Instant.now().plusSeconds(60).getEpochSecond()));
 
         RateLimitErrorResponse errorResponse = RateLimitErrorResponse.tooManyRequests(60);
-        objectMapper.writeValue(response.getWriter(), errorResponse);
+        jsonMapper.writeValue(response.getWriter(), errorResponse);
 
         log.warn("Rate limit exceeded for category: {}", category);
     }

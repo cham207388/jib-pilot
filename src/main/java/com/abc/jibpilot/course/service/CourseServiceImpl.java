@@ -82,6 +82,52 @@ public class CourseServiceImpl implements CourseService {
         courseRepository.delete(course);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<CourseResponse> searchCourses(String query, int limit) {
+        if (query == null || query.trim().isEmpty()) {
+            return List.of();
+        }
+        return courseRepository.searchCourses(query.trim(), limit)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Override
+    public List<CourseResponse> bulkCreateCourses(List<CreateCourseRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            return List.of();
+        }
+
+        // Validate all codes are unique within the batch
+        Set<String> codesInBatch = requests.stream()
+                .map(CreateCourseRequest::code)
+                .collect(Collectors.toSet());
+        if (codesInBatch.size() != requests.size()) {
+            throw new ResponseStatusException(CONFLICT, "Duplicate course codes found in batch");
+        }
+
+        // Validate codes don't conflict with existing courses
+        for (CreateCourseRequest request : requests) {
+            ensureCodeIsUnique(request.code(), null);
+        }
+
+        // Create all courses
+        List<Course> courses = requests.stream()
+                .map(request -> Course.builder()
+                        .code(request.code())
+                        .title(request.title())
+                        .description(request.description())
+                        .build())
+                .toList();
+
+        return courseRepository.saveAll(courses)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     private void ensureCodeIsUnique(String code, Long currentId) {
         courseRepository.findByCode(code).ifPresent(existing -> {
             boolean isDifferentRecord = currentId == null || !existing.getId().equals(currentId);

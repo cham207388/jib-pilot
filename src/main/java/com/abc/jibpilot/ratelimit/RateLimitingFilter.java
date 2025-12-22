@@ -86,8 +86,11 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             return EndpointCategory.AUTH;
         } else if (requestUri.startsWith("/actuator/") || 
                    requestUri.startsWith("/swagger-ui") || 
-                   requestUri.startsWith("/v3/api-docs")) {
-            return EndpointCategory.PUBLIC;
+                   requestUri.startsWith("/v3/api-docs") ||
+                   requestUri.startsWith("/swagger-resources") ||
+                   requestUri.startsWith("/webjars")) {
+            // Exclude actuator and swagger endpoints from rate limiting
+            return EndpointCategory.NONE;
         } else if (requestUri.startsWith("/api/v1/")) {
             return EndpointCategory.AUTHENTICATED;
         }

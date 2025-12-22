@@ -14,7 +14,7 @@ services:
       APP_ADMIN_PASSWORD: ChangeMe123!
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
     ports:
-      - "8081:8080"
+      - "8085:8085"
     depends_on:
       - postgres
 

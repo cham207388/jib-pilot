@@ -10,12 +10,14 @@ import org.junit.jupiter.api.Test;
 import com.abc.jibpilot.auth.filter.JwtAuthenticationFilter;
 import com.abc.jibpilot.auth.service.JwtService;
 import com.abc.jibpilot.ratelimit.RateLimitingFilter;
+import com.abc.jibpilot.config.JacksonConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.context.annotation.Import;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -37,12 +39,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = CourseController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @ImportAutoConfiguration(JacksonAutoConfiguration.class)
+@Import(JacksonConfig.class)
 class CourseControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Autowired
+    private JsonMapper jsonMapper;
 
     @MockitoBean
     private CourseService courseService;
@@ -68,7 +72,7 @@ class CourseControllerTest {
 
         mockMvc.perform(post("/api/v1/courses")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "http://localhost/api/v1/courses/1"));
     }
@@ -81,7 +85,7 @@ class CourseControllerTest {
 
         mockMvc.perform(get("/api/v1/courses/{id}", 7L))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(response)));
+                .andExpect(content().json(jsonMapper.writeValueAsString(response)));
     }
 
     @Test
@@ -95,7 +99,7 @@ class CourseControllerTest {
 
         mockMvc.perform(get("/api/v1/courses"))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(responses)));
+                .andExpect(content().json(jsonMapper.writeValueAsString(responses)));
     }
 
     @Test
@@ -107,9 +111,9 @@ class CourseControllerTest {
 
         mockMvc.perform(put("/api/v1/courses/{id}", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(response)));
+                .andExpect(content().json(jsonMapper.writeValueAsString(response)));
     }
 
     @Test
@@ -132,6 +136,6 @@ class CourseControllerTest {
 
         mockMvc.perform(get("/api/v1/courses/{id}/students", 8L))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(responses)));
+                .andExpect(content().json(jsonMapper.writeValueAsString(responses)));
     }
 }

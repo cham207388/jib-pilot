@@ -9,13 +9,15 @@ import com.abc.jibpilot.student.dto.CreateStudentRequest;
 import com.abc.jibpilot.student.dto.StudentResponse;
 import com.abc.jibpilot.student.dto.UpdateStudentRequest;
 import com.abc.jibpilot.student.service.StudentService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.abc.jibpilot.config.JacksonConfig;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -38,12 +40,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = StudentController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @ImportAutoConfiguration(JacksonAutoConfiguration.class)
+@Import(JacksonConfig.class)
 class StudentControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Autowired
+    private JsonMapper jsonMapper;
 
     @MockitoBean
     private StudentService studentService;
@@ -69,7 +73,7 @@ class StudentControllerTest {
 
         mockMvc.perform(post("/api/v1/students")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "http://localhost/api/v1/students/5"));
     }
@@ -89,7 +93,7 @@ class StudentControllerTest {
 
         mockMvc.perform(get("/api/v1/students/{id}", 1L))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(response)));
+                .andExpect(content().json(jsonMapper.writeValueAsString(response)));
     }
 
     @Test
@@ -103,7 +107,7 @@ class StudentControllerTest {
 
         mockMvc.perform(get("/api/v1/students"))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(responses)));
+                .andExpect(content().json(jsonMapper.writeValueAsString(responses)));
     }
 
     @Test
@@ -116,9 +120,9 @@ class StudentControllerTest {
 
         mockMvc.perform(put("/api/v1/students/{id}", 3L)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(response)));
+                .andExpect(content().json(jsonMapper.writeValueAsString(response)));
     }
 
     @Test
@@ -147,7 +151,7 @@ class StudentControllerTest {
 
         mockMvc.perform(post("/api/v1/students/{studentId}/courses/{courseId}", 6L, 11L))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(response)));
+                .andExpect(content().json(jsonMapper.writeValueAsString(response)));
     }
 
     @Test
@@ -165,6 +169,6 @@ class StudentControllerTest {
 
         mockMvc.perform(delete("/api/v1/students/{studentId}/courses/{courseId}", 6L, 11L))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(response)));
+                .andExpect(content().json(jsonMapper.writeValueAsString(response)));
     }
 }

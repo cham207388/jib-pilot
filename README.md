@@ -913,6 +913,82 @@ curl http://localhost:8085/actuator/userNumbers
 ./gradlew test
 ```
 
+### Conditional Test Execution
+
+The project uses JUnit tags to organize tests into different categories. You can run specific test suites conditionally:
+
+#### Run Only WebMvcTest Tests
+
+Tests tagged with `@Tag("webmvc")` use `@WebMvcTest`, which only loads the web layer for faster execution:
+
+```bash
+./gradlew webmvcTest
+```
+
+**What gets tested:**
+- Controller endpoints and request/response handling
+- HTTP status codes and headers
+- JSON serialization/deserialization
+- Security annotations and method-level authorization
+
+**Test files:**
+- `StudentControllerTest`
+- `CourseControllerTest`
+
+#### Run Only SpringBootTest Integration Tests
+
+Tests tagged with `@Tag("spring-boot")` use `@SpringBootTest`, which loads the full Spring application context:
+
+```bash
+./gradlew springBootTest
+```
+
+**What gets tested:**
+- Full application context integration
+- All Spring components (security, filters, configuration)
+- End-to-end request handling through the complete filter chain
+- Integration with all Spring Boot auto-configurations
+
+**Test files:**
+- `StudentControllerIntTest`
+- `CourseControllerIntTest`
+
+#### Test Type Comparison
+
+| Feature | @WebMvcTest | @SpringBootTest |
+|---------|-------------|-----------------|
+| **Context Loading** | Web layer only | Full application context |
+| **Speed** | Faster (lighter context) | Slower (full context) |
+| **Use Case** | Controller unit testing | Integration testing |
+| **Spring Components** | Controllers, filters, security | All beans and configurations |
+| **When to Use** | Fast feedback during development | Verify full integration |
+
+Both test types use mocked services (`@MockitoBean`) to keep tests isolated and fast, while `@SpringBootTest` provides a more realistic integration test environment.
+
+### Test Reports
+
+All test tasks generate HTML and XML test reports:
+
+**Report Locations:**
+- **All Tests**: `build/reports/tests/test/index.html`
+- **WebMvcTest Tests**: `build/reports/tests/webmvcTest/index.html`
+- **SpringBootTest Tests**: `build/reports/tests/springBootTest/index.html`
+
+**Report Contents:**
+- Test execution summary (passed, failed, skipped)
+- Individual test results with execution time
+- Test output and stack traces for failures
+- Package and class-level test organization
+
+**View Reports:**
+Open the `index.html` file in any web browser to view detailed test results. Reports are automatically generated after each test run.
+
+**XML Reports:**
+JUnit XML reports are also generated in `build/test-results/` for CI/CD integration:
+- `build/test-results/test/`
+- `build/test-results/webmvcTest/`
+- `build/test-results/springBootTest/`
+
 ### Test Coverage
 
 The project includes comprehensive test coverage:

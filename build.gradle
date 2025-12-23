@@ -62,6 +62,44 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
+tasks.register("webmvcTest", Test) {
+    group = "verification"
+    description = "Runs tests tagged with 'webmvc'"
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags("webmvc")
+    }
+    reports {
+        html.required = true
+        junitXml.required = true
+    }
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+        showStandardStreams = false
+    }
+}
+
+tasks.register("springBootTest", Test) {
+    group = "verification"
+    description = "Runs tests tagged with 'spring-boot'"
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags("spring-boot")
+    }
+    reports {
+        html.required = true
+        junitXml.required = true
+    }
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+        showStandardStreams = false
+    }
+}
+
 // Jib configuration
 jib {
     from {

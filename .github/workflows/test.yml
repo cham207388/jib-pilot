@@ -8,31 +8,33 @@ on:
     branches:
       - main
 
-env:
-  MODULES: 'src/test/java/com/abc/jibpilot/student/controller src/test/java/com/abc/jibpilot/course/controller'
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
     outputs:
-      changes: ${{ steps.detect-changes.outputs.changes }}
+      studentControllerTest: ${{ steps.filter.outputs.studentControllerTest }}
+      courseControllerTest: ${{ steps.filter.outputs.courseControllerTest }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
       - name: Detect changes
-        id: detect-changes
-        uses: cham207388/detect-changes@v1
+        id: filter
+        uses: dorny/paths-filter@v3
         with:
-          modules: ${{ env.MODULES }}
+          filters: |
+            studentControllerTest:
+              - 'src/test/java/com/abc/jibpilot/student/controller/**'
+            courseControllerTest:
+              - 'src/test/java/com/abc/jibpilot/course/controller/**'
 
       - name: Show outputs
         run: |
-          echo "changes: ${{ steps.detect-changes.outputs.changes }}"  
+          echo "studentControllerTest: ${{ steps.filter.outputs.studentControllerTest }}"
+          echo "courseControllerTest: ${{ steps.filter.outputs.courseControllerTest }}"
   test:
     runs-on: ubuntu-latest
     needs: detect-changes
@@ -46,9 +48,9 @@ jobs:
           cache: 'gradle'
 
       - name: Run studentControllerTest tests with Gradle
-        if: ${{ fromJson(needs.detect-changes.outputs.changes)['src/test/java/com/abc/jibpilot/student/controller'] == 'true' }}
+        if: ${{ needs.detect-changes.outputs.studentControllerTest == 'true' }}
         run: ./gradlew studentControllerTest
 
       - name: Run courseControllerTest tests with Gradle
-        if: ${{ fromJson(needs.detect-changes.outputs.changes)['src/test/java/com/abc/jibpilot/course/controller'] == 'true' }}
+        if: ${{ needs.detect-changes.outputs.courseControllerTest == 'true' }}
         run: ./gradlew courseControllerTest

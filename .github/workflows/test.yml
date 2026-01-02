@@ -24,15 +24,92 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Detect changes
-        id: detect-changes
+      - name: Determine if this is a new commit in existing PR
+        id: check-commit
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # Check if HEAD^ exists and is different from the base branch
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            MERGE_BASE=$(git merge-base HEAD "$BASE_SHA" 2>/dev/null || echo "")
+            HEAD_PARENT=$(git rev-parse HEAD^ 2>/dev/null || echo "")
+            
+            if [ -n "$HEAD_PARENT" ] && [ "$HEAD_PARENT" != "$MERGE_BASE" ]; then
+              # This is a new commit added to existing PR - compare incrementally
+              echo "incremental=true" >> $GITHUB_OUTPUT
+              echo "base_sha=$HEAD_PARENT" >> $GITHUB_OUTPUT
+            else
+              # This is a new PR or first commit - compare against base branch
+              echo "incremental=false" >> $GITHUB_OUTPUT
+              echo "base_sha=$BASE_SHA" >> $GITHUB_OUTPUT
+            fi
+          else
+            # For push events, always compare incrementally
+            HEAD_PARENT=$(git rev-parse HEAD^ 2>/dev/null || echo "")
+            if [ -n "$HEAD_PARENT" ]; then
+              echo "incremental=true" >> $GITHUB_OUTPUT
+              echo "base_sha=$HEAD_PARENT" >> $GITHUB_OUTPUT
+            else
+              # No previous commit, use the action's default behavior
+              echo "incremental=false" >> $GITHUB_OUTPUT
+              echo "base_sha=" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Detect changes (incremental - latest commit only)
+        if: steps.check-commit.outputs.incremental == 'true'
+        id: detect-changes-incremental
+        run: |
+          BASE_SHA="${{ steps.check-commit.outputs.base_sha }}"
+          python3 << EOF > changes_output.txt
+          import json
+          import subprocess
+          import sys
+          
+          modules = "${{ env.MODULES }}".split()
+          base_sha = "$BASE_SHA"
+          
+          changes = {}
+          for module in modules:
+              # Check if any files in this module changed between base and HEAD
+              result = subprocess.run(
+                  ['git', 'diff', '--name-only', base_sha, 'HEAD'],
+                  capture_output=True,
+                  text=True
+              )
+              changed_files = result.stdout.strip().split('\n') if result.stdout.strip() else []
+              
+              # Check if any changed file is in this module
+              module_changed = any(f.startswith(module) for f in changed_files if f)
+              changes[module] = 'true' if module_changed else 'false'
+          
+          output = json.dumps(changes)
+          print(output)
+          print(f"Detected changes: {output}", file=sys.stderr)
+          EOF
+          CHANGES=$(cat changes_output.txt)
+          echo "changes=$CHANGES" >> $GITHUB_OUTPUT
+          echo "Detected changes: $CHANGES"
+
+      - name: Detect changes (full PR - all commits)
+        if: steps.check-commit.outputs.incremental == 'false'
+        id: detect-changes-full
         uses: cham207388/detect-changes@v1
         with:
           modules: ${{ env.MODULES }}
 
+      - name: Set final changes output
+        id: detect-changes
+        run: |
+          if [ "${{ steps.check-commit.outputs.incremental }}" == "true" ]; then
+            echo "changes=${{ steps.detect-changes-incremental.outputs.changes }}" >> $GITHUB_OUTPUT
+          else
+            echo "changes=${{ steps.detect-changes-full.outputs.changes }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Show outputs
         run: |
           echo "changes: ${{ steps.detect-changes.outputs.changes }}"
+          echo "incremental: ${{ steps.check-commit.outputs.incremental }}"
   test:
     runs-on: ubuntu-latest
     needs: detect-changes

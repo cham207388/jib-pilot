@@ -9,7 +9,7 @@ on:
       - main
 
 env:
-  MODULES: 'src/test/java/com/abc/jibpilot/student/controller/StudentControllerTest.java,src/test/java/com/abc/jibpilot/course/controller/CourseControllerTest.java'
+  MODULES: 'src/test/java/com/abc/jibpilot/student/controller,src/test/java/com/abc/jibpilot/course/controller'
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
@@ -52,9 +52,9 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
 
       - name: Run studentControllerTest tests with Gradle
-        if: ${{ fromJson(needs.detect-changes.outputs.changes)['src/test/java/com/abc/jibpilot/student/controller/StudentControllerTest.java'] }}
+        if: ${{ fromJson(needs.detect-changes.outputs.changes)['src/test/java/com/abc/jibpilot/student/controller'] }}
         run: ./gradlew studentControllerTest
 
       - name: Run courseControllerTest tests with Gradle
-        if: ${{ fromJson(needs.detect-changes.outputs.changes)['src/test/java/com/abc/jibpilot/course/controller/CourseControllerTest.java'] }}
+        if: ${{ fromJson(needs.detect-changes.outputs.changes)['src/test/java/com/abc/jibpilot/course/controller'] }}
         run: ./gradlew courseControllerTest

@@ -41,6 +41,10 @@ dependencies {
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+    
+    // Rate limiting with Bucket4j
+    implementation 'com.bucket4j:bucket4j-core:8.10.1'
+    
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
     compileOnly 'org.projectlombok:lombok'
@@ -56,6 +60,44 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+tasks.register("webmvcTest", Test) {
+    group = "verification"
+    description = "Runs tests tagged with 'webmvc'"
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags("webmvc")
+    }
+    reports {
+        html.required = true
+        junitXml.required = true
+    }
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+        showStandardStreams = false
+    }
+}
+
+tasks.register("springBootTest", Test) {
+    group = "verification"
+    description = "Runs tests tagged with 'spring-boot'"
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags("spring-boot")
+    }
+    reports {
+        html.required = true
+        junitXml.required = true
+    }
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+        showStandardStreams = false
+    }
 }
 
 // Jib configuration

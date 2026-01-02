@@ -7,5 +7,4 @@ public record AuthResponse(
         String tokenType,
         Role role,
         Long studentId
-) {
-}
+) {}

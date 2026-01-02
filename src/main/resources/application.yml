@@ -27,9 +27,30 @@ app:
   admin:
     email: admin@example.com
     password: ChangeMe123!
+  rate-limiting:
+    enabled: true
+    auth:
+      requests-per-minute: 5
+    public:
+      requests-per-minute: 100
+    authenticated:
+      requests-per-minute: 1000
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    use-root-path: false
 
 management:
   endpoints:
     web:
       exposure:
         include: "*"
+      base-path: /actuator
+  endpoint:
+    health:
+      enabled: true
+      show-details: always

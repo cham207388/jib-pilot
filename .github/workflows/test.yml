@@ -9,7 +9,7 @@ on:
       - main
 
 env:
-  MODULES: 'src/test/java/com/abc/jibpilot/student/controller,src/test/java/com/abc/jibpilot/course/controller'
+  MODULES: 'src/test/java/com/abc/jibpilot/student/controller src/test/java/com/abc/jibpilot/course/controller'
 jobs:
   detect-changes:
     runs-on: ubuntu-latest

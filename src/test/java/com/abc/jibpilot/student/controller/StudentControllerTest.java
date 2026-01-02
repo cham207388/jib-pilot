@@ -38,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Tag("webmvc")
+@Tag("studentControllerTest")
 @WebMvcTest(controllers = StudentController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @ImportAutoConfiguration(JacksonAutoConfiguration.class)

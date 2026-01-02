@@ -37,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Tag("webmvc")
+@Tag("courseControllerTest")
 @WebMvcTest(controllers = CourseController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @ImportAutoConfiguration(JacksonAutoConfiguration.class)
@@ -68,7 +68,7 @@ class CourseControllerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void createCourse_returnsCreatedWithLocationHeader() throws Exception {
-        System.out.println("createCourse_returnsCreatedWithLocationHeader");
+        System.out.println("createCourse_returnsCreatedWithLocationHeader!!!!");
         CreateCourseRequest request = new CreateCourseRequest("CS101", "Intro to CS", "Basics");
         CourseResponse response = new CourseResponse(1L, request.code(), request.title(), request.description(), Set.of());
         when(courseService.createCourse(request)).thenReturn(response);

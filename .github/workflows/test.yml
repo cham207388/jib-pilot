@@ -8,33 +8,31 @@ on:
     branches:
       - main
 
+env:
+  MODULES: 'src/test/java/com/abc/jibpilot/student/controller src/test/java/com/abc/jibpilot/course/controller'
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: read
     outputs:
-      studentControllerTest: ${{ steps.filter.outputs.studentControllerTest }}
-      courseControllerTest: ${{ steps.filter.outputs.courseControllerTest }}
+      changes: ${{ steps.detect-changes.outputs.changes }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Detect changes
-        id: filter
-        uses: dorny/paths-filter@v3
+      - uses: actions/setup-python@v5
         with:
-          filters: |
-            studentControllerTest:
-              - 'src/test/java/com/abc/jibpilot/student/controller/**'
-            courseControllerTest:
-              - 'src/test/java/com/abc/jibpilot/course/controller/**'
+          python-version: '3.11'
+
+      - name: Detect changes
+        id: detect-changes
+        uses: cham207388/detect-changes@v1
+        with:
+          modules: ${{ env.MODULES }}
 
       - name: Show outputs
         run: |
-          echo "studentControllerTest: ${{ steps.filter.outputs.studentControllerTest }}"
-          echo "courseControllerTest: ${{ steps.filter.outputs.courseControllerTest }}"
+          echo "changes: ${{ steps.detect-changes.outputs.changes }}"
   test:
     runs-on: ubuntu-latest
     needs: detect-changes
@@ -48,9 +46,9 @@ jobs:
           cache: 'gradle'
 
       - name: Run studentControllerTest tests with Gradle
-        if: ${{ needs.detect-changes.outputs.studentControllerTest == 'true' }}
+        if: ${{ fromJson(needs.detect-changes.outputs.changes)['src/test/java/com/abc/jibpilot/student/controller'] == 'true' }}
         run: ./gradlew studentControllerTest
 
       - name: Run courseControllerTest tests with Gradle
-        if: ${{ needs.detect-changes.outputs.courseControllerTest == 'true' }}
+        if: ${{ fromJson(needs.detect-changes.outputs.changes)['src/test/java/com/abc/jibpilot/course/controller'] == 'true' }}
         run: ./gradlew courseControllerTest

@@ -62,13 +62,13 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-tasks.register("webmvcTest", Test) {
+tasks.register("courseControllerTest", Test) {
     group = "verification"
-    description = "Runs tests tagged with 'webmvc'"
+    description = "Runs tests tagged with 'courseControllerTest'"
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
     useJUnitPlatform {
-        includeTags("webmvc")
+        includeTags("courseControllerTest")
     }
     reports {
         html.required = true
@@ -81,13 +81,13 @@ tasks.register("webmvcTest", Test) {
     }
 }
 
-tasks.register("springBootTest", Test) {
+tasks.register("studentControllerTest", Test) {
     group = "verification"
-    description = "Runs tests tagged with 'spring-boot'"
+    description = "Runs tests tagged with 'studentControllerTest'"
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
     useJUnitPlatform {
-        includeTags("spring-boot")
+        includeTags("studentControllerTest")
     }
     reports {
         html.required = true

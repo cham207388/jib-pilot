@@ -255,7 +255,6 @@ To use Swagger UI:
 
 </details>
 
-
 </details>
 
 ## Authentication & Authorization
@@ -486,7 +485,6 @@ app:
 
 - **Solution**: Use Spring profiles to configure different limits per environment
 
-
 </details>
 
 ## Rate Limiting Implementation Guide
@@ -691,14 +689,14 @@ app:
       requests-per-minute: 50
 ```
 
-2. **Update RateLimitingConfig**:
+1. **Update RateLimitingConfig**:
 
 ```java
 @Value("${app.rate-limiting.new-category.requests-per-minute:50}")
 private int newCategoryRequestsPerMinute;
 ```
 
-3. **Add enum value** in `RateLimitingFilter`:
+1. **Add enum value** in `RateLimitingFilter`:
 
 ```java
 private enum EndpointCategory {
@@ -706,7 +704,7 @@ private enum EndpointCategory {
 }
 ```
 
-4. **Update category detection**:
+1. **Update category detection**:
 
 ```java
 if (requestUri.startsWith("/api/v1/new-endpoint/")) {
@@ -751,14 +749,14 @@ implementation 'com.bucket4j:bucket4j-redis:8.10.1'
 implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 ```
 
-2. **Update bucket storage** to use Redis:
+1. **Update bucket storage** to use Redis:
 
 ```java
 // Replace ConcurrentMap with Redis-backed storage
 private final RedisTemplate<String, Bucket> redisTemplate;
 ```
 
-3. **Configure Redis connection** in `application.yml`
+1. **Configure Redis connection** in `application.yml`
 
 ### Extension Points
 
@@ -917,51 +915,57 @@ curl http://localhost:8085/actuator/userNumbers
 
 The project uses JUnit tags to organize tests into different categories. You can run specific test suites conditionally:
 
-#### Run Only WebMvcTest Tests
+#### Run Only courseControllerTest Tests
 
-Tests tagged with `@Tag("webmvc")` use `@WebMvcTest`, which only loads the web layer for faster execution:
+Tests tagged with `@Tag("courseControllerTest")` use `@WebMvcTest`, which only loads the web layer for faster execution:
 
 ```bash
-./gradlew webmvcTest
+./gradlew courseControllerTest
 ```
 
 **What gets tested:**
+
 - Controller endpoints and request/response handling
 - HTTP status codes and headers
 - JSON serialization/deserialization
 - Security annotations and method-level authorization
 
 **Test files:**
+
 - `StudentControllerTest`
 - `CourseControllerTest`
 
-#### Run Only SpringBootTest Integration Tests
+#### Run Only studentControllerTest Tests
 
-Tests tagged with `@Tag("spring-boot")` use `@SpringBootTest`, which loads the full Spring application context:
+Tests tagged with `@Tag("studentControllerTest")` use `@SpringBootTest`, which loads the full Spring application context:
 
 ```bash
-./gradlew springBootTest
+./gradlew studentControllerTest
 ```
 
 **What gets tested:**
+
 - Full application context integration
 - All Spring components (security, filters, configuration)
 - End-to-end request handling through the complete filter chain
 - Integration with all Spring Boot auto-configurations
 
 **Test files:**
+
 - `StudentControllerIntTest`
 - `CourseControllerIntTest`
+- `StudentControllerTest`
+- `CourseControllerTest`
 
 #### Test Type Comparison
 
-| Feature | @WebMvcTest | @SpringBootTest |
-|---------|-------------|-----------------|
-| **Context Loading** | Web layer only | Full application context |
+| Feature | courseControllerTest | studentControllerTest |
+| --------- | ------------- | ------------- |
+| **Context Loading** | courseControllerTest | studentControllerTest |
 | **Speed** | Faster (lighter context) | Slower (full context) |
-| **Use Case** | Controller unit testing | Integration testing |
-| **Spring Components** | Controllers, filters, security | All beans and configurations |
-| **When to Use** | Fast feedback during development | Verify full integration |
+| **Use Case** | courseControllerTest | studentControllerTest |
+| **Spring Components** | courseControllerTest | studentControllerTest |
+| **When to Use** | courseControllerTest | studentControllerTest |
 
 Both test types use mocked services (`@MockitoBean`) to keep tests isolated and fast, while `@SpringBootTest` provides a more realistic integration test environment.
 
@@ -970,11 +974,13 @@ Both test types use mocked services (`@MockitoBean`) to keep tests isolated and 
 All test tasks generate HTML and XML test reports:
 
 **Report Locations:**
+
 - **All Tests**: `build/reports/tests/test/index.html`
 - **WebMvcTest Tests**: `build/reports/tests/webmvcTest/index.html`
 - **SpringBootTest Tests**: `build/reports/tests/springBootTest/index.html`
 
 **Report Contents:**
+
 - Test execution summary (passed, failed, skipped)
 - Individual test results with execution time
 - Test output and stack traces for failures
@@ -985,8 +991,10 @@ Open the `index.html` file in any web browser to view detailed test results. Rep
 
 **XML Reports:**
 JUnit XML reports are also generated in `build/test-results/` for CI/CD integration:
+
 - `build/test-results/test/`
-- `build/test-results/webmvcTest/`
+- `build/test-results/courseControllerTest/`
+- `build/test-results/studentControllerTest/`
 - `build/test-results/springBootTest/`
 
 ### Test Coverage

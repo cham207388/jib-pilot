@@ -3,10 +3,10 @@ name: Test
 on:
   push:
     branches:
-      - main
+      - mainx
   pull_request:
     branches:
-      - main
+      - mainx
 
 jobs:
   test:

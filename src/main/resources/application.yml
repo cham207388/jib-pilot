@@ -4,9 +4,10 @@ spring:
   application:
     name: jib-pilot
   datasource:
-    url: jdbc:postgresql://localhost:5432/jib_pilot
-    username: postgres
-    password: postgres
+    # Use environment variables when available (for Docker), fallback to localhost for local dev
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/jib_pilot}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
     hikari:
       # Connection pool settings
@@ -22,27 +23,27 @@ spring:
       # Register JMX beans for monitoring
       register-mbeans: true
   # Flyway Database Migration Configuration
+  # Flyway MUST run before JPA/Hibernate initialization
+  # Flyway automatically uses the same datasource as the application
   flyway:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
-    baseline-version: 0
     validate-on-migrate: true
     clean-disabled: true
-    out-of-order: false
-    # Ensure Flyway runs before JPA/Hibernate initialization
-    check-location: true
   jpa:
     hibernate:
-      ddl-auto: validate
-    show-sql: true
+      ddl-auto: none
+    open-in-view: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
   docker:
     compose:
-      lifecycle-management: start-and-stop
+      # Disable Docker Compose lifecycle management when SPRING_DOCKER_COMPOSE_ENABLED=false
+      # This prevents conflicts with Flyway migrations
+      enabled: ${SPRING_DOCKER_COMPOSE_ENABLED:true}
+      lifecycle-management: ${SPRING_DOCKER_COMPOSE_LIFECYCLE_MANAGEMENT:start-and-stop}
 app:
   security:
     jwt:

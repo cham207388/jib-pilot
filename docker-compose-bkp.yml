@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   app:
     image: baicham/jib-pilot:latest
@@ -8,7 +6,6 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/jib_pilot
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
@@ -16,8 +13,20 @@ services:
       APP_ADMIN_EMAIL: admin@example.com
       APP_ADMIN_PASSWORD: ChangeMe123!
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      # New Relic configuration
+      NEW_RELIC_LICENSE_KEY: ${NEW_RELIC_LICENSE_KEY}
+      NEW_RELIC_APP_NAME: ${NEW_RELIC_APP_NAME:-jib-pilot}
+      NEW_RELIC_ENVIRONMENT: ${NEW_RELIC_ENVIRONMENT:-default}
+      NEW_RELIC_DISTRIBUTED_TRACING_ENABLED: ${NEW_RELIC_DISTRIBUTED_TRACING_ENABLED:-true}
+      NEW_RELIC_LOG_LEVEL: ${NEW_RELIC_LOG_LEVEL:-info}
+      NEW_RELIC_CONFIG_FILE: /app/resources/newrelic.yml
+      # Log file path for Infrastructure agent forwarding
+      LOG_PATH: /app/logs/
     ports:
       - "8085:8085"
+    volumes:
+      # Mount logs directory for Infrastructure agent log forwarding (if enabled)
+      - app_logs:/app/logs
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8085/actuator/health"]
       interval: 30s
@@ -84,8 +93,31 @@ services:
       retries: 5
       start_period: 60s
 
+  # New Relic Infrastructure Agent (optional - uncomment to enable)
+  # Monitors container metrics, host metrics, and forwards logs to New Relic
+  # newrelic-infra:
+  #   image: newrelic/infrastructure:latest
+  #   restart: unless-stopped
+  #   privileged: true
+  #   network_mode: "host"
+  #   pid: host
+  #   environment:
+  #     NRIA_LICENSE_KEY: ${NEW_RELIC_LICENSE_KEY}
+  #     NRIA_OVERRIDE_HOST_ROOT: /host
+  #     NRIA_DISPLAY_NAME: jib-pilot-infrastructure
+  #     # Enable log forwarding
+  #     NRIA_LOG_FORWARDING_ENABLED: "true"
+  #     # Log file paths to forward
+  #     NRIA_LOG_FILES: "/var/log/app/application.log"
+  #   volumes:
+  #     - "/:/host:ro"
+  #     - "/var/run/docker.sock:/var/run/docker.sock:ro"
+  #     # Mount application logs for forwarding
+  #     - app_logs:/var/log/app:ro
+
 volumes:
   postgres_data:
   sonarqube_data:
   sonarqube_extensions:
   sonarqube_logs:
+  # app_logs:  # Uncomment when enabling Infrastructure agent

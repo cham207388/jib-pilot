@@ -8,6 +8,10 @@ COPY gradle gradle
 
 RUN chmod +x gradlew && ./gradlew --no-daemon --version
 
+# Create directory for New Relic agent and logs
+RUN mkdir -p /workspace/newrelic /workspace/logs
+
 EXPOSE 8085
 # Source will be bind-mounted for hot reload; bootRun runs inside container
-CMD ["./gradlew", "--no-daemon", "bootRun"]
+# New Relic agent will be available via Gradle dependency resolution
+CMD ["./gradlew", "--no-daemon", "bootRun", "-Pnewrelic.enabled=true"]

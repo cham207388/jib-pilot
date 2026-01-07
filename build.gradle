@@ -32,10 +32,11 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // Flyway must be before JPA to ensure migrations run before Hibernate validation
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-docker-compose'
@@ -47,6 +48,12 @@ dependencies {
     
     // Rate limiting with Bucket4j
     implementation 'com.bucket4j:bucket4j-core:8.10.1'
+    
+    // Logging for New Relic (optional - for JSON structured logging)
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+    
+    // Note: New Relic Java agent is downloaded automatically via downloadNewRelicAgent task
+    // The agent JAR is not available as a Maven dependency and must be downloaded from New Relic
     
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
@@ -63,6 +70,24 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// Configure bootRun to support New Relic agent (optional, for local development)
+tasks.named('bootRun') {
+    // Add JVM arguments for New Relic agent if it exists
+    // Place newrelic.jar at src/main/resources/newrelic/newrelic.jar for local development
+    def newRelicJar = file("${projectDir}/src/main/resources/newrelic/newrelic.jar")
+    if (!newRelicJar.exists()) {
+        // Fallback to build directory
+        newRelicJar = file("$buildDir/newrelic/newrelic.jar")
+    }
+    
+    if (newRelicJar.exists()) {
+        jvmArgs = [
+            "-javaagent:${newRelicJar.absolutePath}",
+            "-Dnewrelic.config.file=${projectDir}/src/main/resources/newrelic.yml"
+        ]
+    }
 }
 
 tasks.register("courseControllerTest", Test) {
@@ -103,6 +128,10 @@ tasks.register("studentControllerTest", Test) {
     }
 }
 
+// New Relic agent setup (optional)
+// Users should download newrelic.jar manually and place it in src/main/resources/newrelic/
+// Or download to build/newrelic/newrelic.jar for container builds
+
 // Jib configuration
 jib {
     from {
@@ -126,33 +155,57 @@ jib {
     }
     container {
         mainClass = 'com.abc.jibpilot.JibPilotApplication'
-        jvmFlags = [
+        def jvmFlagsList = [
                 '-XX:+UseContainerSupport',
                 '-XX:MaxRAMPercentage=75.0',
                 '-Djava.security.egd=file:/dev/./urandom'
         ]
+        
+        // Add New Relic agent JVM flag if agent exists
+        // Agent should be placed at build/newrelic/newrelic.jar before building
+        def newRelicJar = file("$buildDir/newrelic/newrelic.jar")
+        if (newRelicJar.exists() && newRelicJar.length() > 0) {
+            jvmFlagsList.add('-javaagent:/app/newrelic/newrelic.jar')
+        }
+        
+        jvmFlags = jvmFlagsList
         ports = ['8080']
         environment = [
-                'SPRING_PROFILES_ACTIVE': 'prod'
+                'NEW_RELIC_CONFIG_FILE': '/app/resources/newrelic.yml'
         ]
         creationTime = 'USE_CURRENT_TIMESTAMP'
         format = 'OCI'
     }
     // Optimize layer caching for Spring Boot
     extraDirectories {
+        def newRelicJar = file("$buildDir/newrelic/newrelic.jar")
+        def hasNewRelic = newRelicJar.exists() && newRelicJar.length() > 0
+        
         paths {
             path {
                 from = file('src/main/resources')
                 into = '/app/resources'
             }
+            if (hasNewRelic) {
+                path {
+                    from = file("$buildDir/newrelic")
+                    into = '/app/newrelic'
+                }
+            }
         }
         permissions = [
                 '/app/resources': '755'
         ]
+        if (hasNewRelic) {
+            permissions['/app/newrelic'] = '755'
+        }
     }
     // Configure for Spring Boot fat JAR
     containerizingMode = 'packaged'
 }
+
+// Note: New Relic agent should be placed at build/newrelic/newrelic.jar before Jib builds
+// Or use src/main/resources/newrelic/newrelic.jar for local development
 
 // SonarQube configuration
 sonarqube {

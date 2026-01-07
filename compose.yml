@@ -2,7 +2,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     volumes:
       - .:/workspace
     environment:
@@ -13,10 +13,18 @@ services:
       APP_ADMIN_EMAIL: admin@example.com
       APP_ADMIN_PASSWORD: ChangeMe123!
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      # New Relic configuration
+      NEW_RELIC_LICENSE_KEY: ${NEW_RELIC_LICENSE_KEY}
+      NEW_RELIC_APP_NAME: ${NEW_RELIC_APP_NAME:-jib-pilot}
+      NEW_RELIC_ENVIRONMENT: ${NEW_RELIC_ENVIRONMENT:-default}
+      NEW_RELIC_DISTRIBUTED_TRACING_ENABLED: ${NEW_RELIC_DISTRIBUTED_TRACING_ENABLED:-true}
+      NEW_RELIC_LOG_LEVEL: ${NEW_RELIC_LOG_LEVEL:-info}
+      NEW_RELIC_CONFIG_FILE: /workspace/src/main/resources/newrelic.yml
     ports:
       - "8085:8085"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   postgres:
     image: postgres:16-alpine
@@ -29,6 +37,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:

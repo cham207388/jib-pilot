@@ -1,0 +1,49 @@
+#
+# New Relic Agent Configuration File
+#
+# This file configures the New Relic Java agent for the jib-pilot application.
+# License key and app name are set via environment variables for security.
+#
+
+common: &default_settings
+  # License key from environment variable (required)
+  license_key: ${NEW_RELIC_LICENSE_KEY}
+  
+  # Application name - can be overridden via environment variable
+  app_name: ${NEW_RELIC_APP_NAME:jib-pilot}
+  
+  # Enable distributed tracing
+  distributed_tracing:
+    enabled: ${NEW_RELIC_DISTRIBUTED_TRACING_ENABLED:true}
+  
+  # Logging configuration
+  log_file: logs/newrelic.log
+  log_level: ${NEW_RELIC_LOG_LEVEL:info}
+  
+  # Transaction tracing
+  transaction_tracer:
+    enabled: true
+    record_sql: obfuscated
+    stack_trace_threshold: 0.500
+    explain_threshold: 0.500
+    transaction_threshold: apdex_f
+  
+  # Error collector
+  error_collector:
+    enabled: true
+    capture_events: true
+    max_event_samples_stored: 100
+  
+  # Browser monitoring (if applicable)
+  browser_monitoring:
+    auto_instrument: false
+  
+  # Thread profiler
+  thread_profiler:
+    enabled: true
+  
+  # Labels for environment tagging
+  labels:
+    environment: ${NEW_RELIC_ENVIRONMENT:default}
+    application: jib-pilot
+

@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Slf4j
@@ -26,6 +27,7 @@ public class AdminInitializer {
     private String adminPassword;
 
     @Bean
+    @DependsOn("flywayMigrationInitializer")
     public CommandLineRunner seedAdmin() {
         log.info("Seeding admin user with email: {}", adminEmail);
         return args -> {

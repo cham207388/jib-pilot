@@ -70,9 +70,8 @@ jib-pilot/
 │   │       └── static/           # Static resources
 │   └── test/                     # Test classes
 ├── build.gradle                   # Build configuration
-├── docker-compose.yml            # Production Docker Compose
-├── docker-compose.dev.yml        # Development Docker Compose
-└── Dockerfile.dev                # Development Dockerfile
+├── compose.yml                # Docker Compose configuration
+└── Dockerfile                 # Dockerfile
 ```
 
 </details>
@@ -119,6 +118,9 @@ You can override configuration using environment variables:
 - `APP_SECURITY_JWT_SECRET`: JWT signing secret
 - `APP_ADMIN_EMAIL`: Admin user email
 - `APP_ADMIN_PASSWORD`: Admin user password
+- `NEW_RELIC_LICENSE_KEY`: New Relic license key (required for monitoring)
+- `NEW_RELIC_APP_NAME`: Application name in New Relic (optional)
+- `NEW_RELIC_ENVIRONMENT`: Environment name (optional, defaults to default)
 
 ### Generate a Strong JWT Secret
 
@@ -165,12 +167,12 @@ PY
 
    > **Note**: Flyway migrations run automatically on startup. The database schema will be created automatically if it doesn't exist.
 
-### Development with Hot Reload
+### Container Deployment with Hot Reload
 
-Use the development Docker Compose setup for hot reload:
+Use Docker Compose for hot reload development:
 
 ```bash
-docker compose -f docker-compose.dev.yml up --build
+docker compose -f compose.yml up --build
 ```
 
 This setup:
@@ -180,7 +182,7 @@ This setup:
 - Uses a strong default JWT secret
 - Runs `./gradlew bootRun` for hot reload
 
-### Production-like Container Deployment
+### Container Deployment
 
 1. **Build the container image:**
 
@@ -195,8 +197,6 @@ This setup:
    ```
 
    The compose file expects the image `baicham/jib-pilot:latest` and exposes the app on port `8080`.
-
-> **Note**: Use one compose file per scenario: `docker-compose.dev.yml` for local development; `docker-compose.yml` with `jibDockerBuild` image for production-like runs.
 
 ## API Documentation
 
@@ -963,15 +963,9 @@ spring:
     group: false
 ```
 
-#### Profile-Specific Settings
+#### Configuration Settings
 
-**Development (`application-dev.yml`):**
-
-- `clean-disabled: false` - Allows clean operations (use with caution)
-- `out-of-order: false` - Migrations must run in order
-- More verbose logging (`org.flywaydb: DEBUG`)
-
-**Production (`application-prod.yml`):**
+The application uses a single default profile with the following settings:
 
 - `clean-disabled: true` - Clean operations disabled for safety
 - `validate-on-migrate: true` - Strict validation
@@ -1134,6 +1128,264 @@ This table is automatically maintained by Flyway and should not be manually modi
 
 </details>
 
+## New Relic Observability
+
+<details>
+<summary>Click to open</summary>
+
+This application is configured for full observability with New Relic, providing comprehensive monitoring of application performance, infrastructure metrics, and log management.
+
+### Overview
+
+New Relic integration includes:
+
+- **Application Performance Monitoring (APM)**: Real-time performance metrics, transaction tracing, and error tracking
+- **Infrastructure Monitoring**: Container and host-level metrics (optional)
+- **Log Management**: Centralized log collection and analysis
+- **Distributed Tracing**: End-to-end request tracing across services
+
+### Prerequisites
+
+1. **New Relic Account**: Create a free account at [newrelic.com](https://newrelic.com)
+2. **License Key**: Retrieve your license key from the New Relic UI:
+   - Navigate to **Account settings** → **API keys** → **License key**
+   - Copy your license key (you'll need this for configuration)
+
+### Configuration
+
+#### Environment Variables
+
+The following environment variables are required for New Relic integration:
+
+**Required:**
+- `NEW_RELIC_LICENSE_KEY` - Your New Relic license key (required)
+
+**Optional (with defaults):**
+- `NEW_RELIC_APP_NAME` - Application name in New Relic (default: `jib-pilot`)
+- `NEW_RELIC_ENVIRONMENT` - Environment name (default: `default`)
+- `NEW_RELIC_DISTRIBUTED_TRACING_ENABLED` - Enable distributed tracing (default: `true`)
+- `NEW_RELIC_LOG_LEVEL` - Agent log level (default: `info`)
+- `NEW_RELIC_ENABLED` - Enable/disable New Relic (default: `true`)
+
+#### Local Development Setup
+
+1. **Set environment variables:**
+
+   ```bash
+   export NEW_RELIC_LICENSE_KEY=your_license_key_here
+   export NEW_RELIC_APP_NAME=jib-pilot
+   export NEW_RELIC_ENVIRONMENT=default
+   ```
+
+2. **Run the application:**
+
+   ```bash
+   ./gradlew bootRun
+   ```
+
+   The New Relic agent will automatically start and begin reporting data.
+
+#### Docker Compose Setup
+
+**Docker Compose:**
+
+```bash
+export NEW_RELIC_LICENSE_KEY=your_license_key_here
+export NEW_RELIC_APP_NAME=jib-pilot
+export NEW_RELIC_ENVIRONMENT=default
+docker compose -f compose.yml up --build
+```
+
+#### Configuration Files
+
+**Primary Configuration**: `src/main/resources/newrelic.yml`
+
+This file contains the main New Relic agent configuration with optimized settings:
+- Transaction tracing enabled
+- SQL recording (obfuscated for security)
+- Error collection enabled
+
+**Application Configuration**: `src/main/resources/application.yml`
+
+Spring Boot application configuration includes New Relic settings that reference the `newrelic.yml` file.
+
+**Logging Configuration**: `src/main/resources/logback-spring.xml`
+
+Structured JSON logging configuration for log forwarding to New Relic.
+
+### What Gets Monitored
+
+#### Application Metrics
+
+- **Transaction Performance**: Response times, throughput, and Apdex scores
+- **Database Queries**: PostgreSQL query performance and slow query detection
+- **HTTP Requests**: Request/response times, status codes, and endpoint performance
+- **Error Tracking**: Exception tracking with stack traces and error rates
+- **JVM Metrics**: Memory usage, GC performance, thread counts
+
+#### Custom Attributes
+
+The application automatically tags data with:
+- `environment`: default (or custom via NEW_RELIC_ENVIRONMENT)
+- `application`: jib-pilot
+- `service.name`: Application name
+- `host.name`: Container/host identifier
+
+#### Database Monitoring
+
+- HikariCP connection pool metrics
+- PostgreSQL query performance
+- Slow query detection (queries > 500ms)
+- Connection pool exhaustion alerts
+
+### Log Forwarding
+
+Logs are automatically forwarded to New Relic in structured JSON format:
+
+- **Log Location**: `/app/logs/application.log` (container) or `logs/application.log` (local)
+- **Format**: JSON with correlation IDs and metadata
+- **Rotation**: Daily rotation with 30-day retention
+- **Forwarding**: Via Infrastructure agent (when enabled) or Logs API
+
+### Infrastructure Monitoring (Optional)
+
+To enable infrastructure monitoring, uncomment the `newrelic-infra` service in `docker-compose.yml`:
+
+```yaml
+newrelic-infra:
+  image: newrelic/infrastructure:latest
+  # ... configuration
+```
+
+This provides:
+- Container metrics (CPU, memory, network)
+- Host-level metrics
+- Log file forwarding
+- Process monitoring
+
+### Verifying Integration
+
+1. **Check Application Logs:**
+
+   Look for New Relic agent initialization messages:
+   ```
+   INFO  com.newrelic.agent - New Relic Agent version X.X.X initialized
+   ```
+
+2. **Verify in New Relic Dashboard:**
+
+   - Log in to [New Relic One](https://one.newrelic.com)
+   - Navigate to **APM & Services** → **Applications**
+   - Look for your application name (e.g., `jib-pilot`)
+   - Data should appear within 1-2 minutes of application startup
+
+3. **Check Agent Status:**
+
+   ```bash
+   # In container
+   docker compose exec app ls -la /app/newrelic/
+   docker compose exec app cat /app/logs/newrelic.log
+   ```
+
+### Viewing Data in New Relic
+
+#### APM Dashboard
+
+- **Overview**: Application health, response time, throughput, error rate
+- **Transactions**: Individual endpoint performance
+- **Databases**: Query performance and slow queries
+- **Errors**: Exception tracking and error rates
+- **JVM**: Memory, GC, and thread metrics
+
+#### Logs
+
+- Navigate to **Logs** in New Relic UI
+- Filter by `service.name: jib-pilot`
+- Search and analyze application logs with correlation IDs
+
+#### Infrastructure (if enabled)
+
+- **Hosts**: Container and host metrics
+- **Processes**: Application process monitoring
+- **Network**: Network I/O metrics
+
+### Custom Dashboards
+
+Create custom dashboards in New Relic to monitor:
+
+- Key business metrics (student enrollments, course creation)
+- API endpoint performance
+- Database connection pool health
+- Error rates by endpoint
+- Response time percentiles
+
+### Alerting
+
+Set up alert policies in New Relic for:
+
+- **High Error Rate**: Error rate > 5% over 5 minutes
+- **Slow Response Time**: Apdex score < 0.7
+- **Database Issues**: Slow queries or connection pool exhaustion
+- **Memory Issues**: JVM memory usage > 80%
+- **Application Down**: No data received for 5 minutes
+
+### Troubleshooting
+
+**Issue**: Application not appearing in New Relic
+
+- **Solution**: Verify `NEW_RELIC_LICENSE_KEY` is set correctly
+- **Solution**: Check application logs for agent initialization errors
+- **Solution**: Ensure agent JAR is included in container image
+- **Solution**: Wait 2-3 minutes for initial data to appear
+
+**Issue**: No transaction data
+
+- **Solution**: Verify JVM flag `-javaagent:/app/newrelic/newrelic.jar` is set
+- **Solution**: Check `newrelic.yml` configuration file is accessible
+- **Solution**: Review agent logs: `logs/newrelic.log`
+
+**Issue**: Logs not appearing in New Relic
+
+- **Solution**: Verify Infrastructure agent is running (if using file-based forwarding)
+- **Solution**: Check log file path matches configuration
+- **Solution**: Ensure logs directory is mounted correctly in Docker
+
+**Issue**: High memory usage
+
+- **Solution**: Adjust `transaction_tracer.max_stack_trace_lines` in `newrelic.yml`
+- **Solution**: Reduce `error_collector.max_event_samples_stored`
+- **Solution**: Disable browser monitoring if not needed
+
+**Issue**: Agent not starting in Docker
+
+- **Solution**: Verify agent JAR is copied to container
+- **Solution**: Check JVM flags in container configuration
+- **Solution**: Ensure `newrelic.yml` is accessible at configured path
+
+### Security Best Practices
+
+1. **Never commit license keys** to version control
+2. **Use environment variables** or secrets management (Docker secrets, Kubernetes secrets)
+3. **Restrict agent configuration file** permissions
+4. **Review custom attributes** to avoid exposing sensitive data
+5. **Use obfuscated SQL** in production (`record_sql: obfuscated`)
+
+### Configuration Files Reference
+
+- **Agent Config**: `src/main/resources/newrelic.yml`
+- **Application Config**: `src/main/resources/application.yml`
+- **Logging Config**: `src/main/resources/logback-spring.xml`
+- **Build Config**: `build.gradle` (Jib configuration)
+
+### Additional Resources
+
+- [New Relic Java Agent Documentation](https://docs.newrelic.com/docs/apm/agents/java-agent/)
+- [New Relic Logs Documentation](https://docs.newrelic.com/docs/logs/)
+- [New Relic Infrastructure Agent](https://docs.newrelic.com/docs/infrastructure/)
+- [New Relic Best Practices](https://docs.newrelic.com/docs/new-relic-solutions/best-practices-guides/)
+
+</details>
+
 ## Security Considerations
 
 1. **JWT Secret**: Always use a strong, randomly generated secret. Never commit secrets to version control.
@@ -1187,6 +1439,14 @@ This table is automatically maintained by Flyway and should not be manually modi
 - Verify migration files are in `src/main/resources/db/migration/`
 - Review `flyway_schema_history` table for applied migrations
 - See Flyway section above for detailed troubleshooting
+
+### New Relic Issues
+
+- Verify `NEW_RELIC_LICENSE_KEY` environment variable is set
+- Check agent logs: `logs/newrelic.log` or `/app/logs/newrelic.log` in container
+- Ensure agent JAR is included in container image
+- Verify JVM flags include `-javaagent` path
+- See New Relic section above for detailed troubleshooting
 
 ## License
 

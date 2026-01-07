@@ -1133,6 +1133,17 @@ The Jib configuration in `build.gradle` includes:
 - Change in `application.yml` if needed
 - Docker Compose uses port `8080` for the containerized app
 
+## New Relic
+
+<details>
+<summary>Click to open</summary>
+
+New Relic is a monitoring service that provides insights into the performance of the application. It is used to monitor the application and to troubleshoot issues.
+
+## Setup
+
+</details>
+
 ## License
 
 [Add your license information here]

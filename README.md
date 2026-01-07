@@ -55,22 +55,22 @@ jib-pilot/
 │   │   │   │   ├── controller/    # Auth endpoints
 │   │   │   │   ├── dto/           # Data transfer objects
 │   │   │   │   ├── entity/        # UserAccount entity
-│   │   │   │   ├── filter/       # JWT authentication filter
-│   │   │   │   ├── model/        # Security models (Role, AppUserDetails)
-│   │   │   │   ├── repository/   # User repository
-│   │   │   │   └── service/      # Auth services
-│   │   │   ├── config/           # Configuration classes
-│   │   │   ├── course/           # Course management
-│   │   │   ├── security/         # Security utilities
-│   │   │   └── student/          # Student management
-│   │   └── resources/
-│   │       ├── application.yml   # Application configuration
-│   │       └── static/           # Static resources
-│   └── test/                     # Test classes
+│   │   │   │   ├── filter/        # JWT authentication filter
+│   │   │   │   ├── model/         # Security models (Role, AppUserDetails)
+│   │   │   │   ├── repository/    # User repository
+│   │   │   │   └── service/       # Auth services
+│   │   │   ├── config/            # Configuration classes
+│   │   │   ├── course/            # Course management
+│   │   │   ├── security/          # Security utilities
+│   │   │   └── student/           # Student management
+│   │   └── resources/ 
+│   │       ├── application.yml    # Application configuration
+│   │       ├── newrelic.yml       # New Relic configuration
+│   │       └── static/            # Static resources
+│   └── test/                      # Test classes
 ├── build.gradle                   # Build configuration
-├── docker-compose.yml            # Production Docker Compose
-├── docker-compose.dev.yml        # Development Docker Compose
-└── Dockerfile.dev                # Development Dockerfile
+├── compose.yml                    # Development Docker Compose file
+└── Dockerfile                     # Development Dockerfile
 ```
 
 </details>
@@ -166,7 +166,7 @@ PY
 Use the development Docker Compose setup for hot reload:
 
 ```bash
-docker compose -f docker-compose.dev.yml up --build
+docker compose -f compose.yml up --build
 ```
 
 This setup:
@@ -192,7 +192,7 @@ This setup:
 
    The compose file expects the image `baicham/jib-pilot:latest` and exposes the app on port `8080`.
 
-> **Note**: Use one compose file per scenario: `docker-compose.dev.yml` for local development; `docker-compose.yml` with `jibDockerBuild` image for production-like runs.
+> **Note**: Use one compose file per scenario: `compose.yml` for local development; `docker-compose.yml` with `jibDockerBuild` image for production-like runs.
 
 ## API Documentation
 
@@ -254,7 +254,6 @@ To use Swagger UI:
 | GET | `/api/v1/courses/{id}/students` | Get students enrolled in course | ADMIN |
 
 </details>
-
 
 </details>
 
@@ -486,7 +485,6 @@ app:
 
 - **Solution**: Use Spring profiles to configure different limits per environment
 
-
 </details>
 
 ## Rate Limiting Implementation Guide
@@ -691,14 +689,14 @@ app:
       requests-per-minute: 50
 ```
 
-2. **Update RateLimitingConfig**:
+1. **Update RateLimitingConfig**:
 
 ```java
 @Value("${app.rate-limiting.new-category.requests-per-minute:50}")
 private int newCategoryRequestsPerMinute;
 ```
 
-3. **Add enum value** in `RateLimitingFilter`:
+1. **Add enum value** in `RateLimitingFilter`:
 
 ```java
 private enum EndpointCategory {
@@ -706,7 +704,7 @@ private enum EndpointCategory {
 }
 ```
 
-4. **Update category detection**:
+1. **Update category detection**:
 
 ```java
 if (requestUri.startsWith("/api/v1/new-endpoint/")) {
@@ -751,14 +749,14 @@ implementation 'com.bucket4j:bucket4j-redis:8.10.1'
 implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 ```
 
-2. **Update bucket storage** to use Redis:
+1. **Update bucket storage** to use Redis:
 
 ```java
 // Replace ConcurrentMap with Redis-backed storage
 private final RedisTemplate<String, Bucket> redisTemplate;
 ```
 
-3. **Configure Redis connection** in `application.yml`
+1. **Configure Redis connection** in `application.yml`
 
 ### Extension Points
 
@@ -1138,9 +1136,67 @@ The Jib configuration in `build.gradle` includes:
 <details>
 <summary>Click to open</summary>
 
-New Relic is a monitoring service that provides insights into the performance of the application. It is used to monitor the application and to troubleshoot issues.
+This project ships with the New Relic Java agent wired into the Gradle build and Jib image.
+The agent is loaded automatically when a license key is present.
+Configuration lives in `src/main/newrelic/newrelic.yml` and supports environment overrides.
 
-## Setup
+### 1) Get your New Relic license key
+
+- In New Relic, go to **API keys** and copy your **License key**.
+- Keep it out of git; use environment variables or `.env`.
+
+### 2) Provide environment variables
+
+Required:
+- `NEW_RELIC_LICENSE_KEY` (your license key)
+
+Optional:
+- `NEW_RELIC_APP_NAME` (defaults to `jib-pilot`)
+
+Example `.env`:
+
+```bash
+NEW_RELIC_LICENSE_KEY=YOUR_LICENSE_KEY
+NEW_RELIC_APP_NAME=jib-pilot
+```
+
+### 3) Run locally (bootRun)
+
+The `bootRun` task loads the agent only when `NEW_RELIC_LICENSE_KEY` is set.
+
+```bash
+export NEW_RELIC_LICENSE_KEY=YOUR_LICENSE_KEY
+export NEW_RELIC_APP_NAME=jib-pilot
+./gradlew bootRun
+```
+
+You should see the agent initialize in the logs and the app appear in New Relic APM.
+
+### 4) Run with Docker/Jib
+
+The Jib build copies the New Relic agent into the image and starts the JVM with
+`-javaagent:/newrelic/newrelic.jar`.
+
+```bash
+./gradlew jibDockerBuild
+docker compose up -d
+```
+
+Make sure `NEW_RELIC_LICENSE_KEY` is set in your environment or `.env` file before running Compose.
+
+### 5) Customize agent settings (optional)
+
+Edit `src/main/newrelic/newrelic.yml` to adjust:
+- `app_name` (static default)
+- log level
+- distributed tracing
+
+### Gradle wiring (what this project does)
+
+- Adds a `newrelicAgent` configuration to pull the official agent JAR.
+- `prepareNewRelicAgent` copies the agent to `build/newrelic/newrelic.jar` and overlays `src/main/newrelic/newrelic.yml`.
+- `bootRun` attaches `-javaagent` only when `NEW_RELIC_LICENSE_KEY` is present.
+- Jib tasks depend on the agent prep and run the container with `-javaagent:/newrelic/newrelic.jar`.
 
 </details>
 

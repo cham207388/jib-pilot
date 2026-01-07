@@ -1,0 +1,54 @@
+# Production profile configuration
+spring:
+  datasource:
+    hikari:
+      # Production-optimized connection pool settings
+      minimum-idle: 10
+      maximum-pool-size: 50
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+      # Connection test query
+      connection-test-query: SELECT 1
+      # Register JMX beans for monitoring
+      register-mbeans: true
+  jpa:
+    hibernate:
+      # Strict validation - no schema changes allowed
+      ddl-auto: validate
+      show-sql: false
+      properties:
+        hibernate:
+          format_sql: false
+          # Production JPA settings
+          jdbc:
+            batch_size: 20
+            order_inserts: true
+            order_updates: true
+          # Second-level cache (optional, configure if needed)
+          cache:
+            use_second_level_cache: false
+  flyway:
+    # Strict production settings
+    clean-disabled: true
+    out-of-order: false
+    # Fail fast on validation errors
+    validate-on-migrate: true
+    # Baseline existing databases
+    baseline-on-migrate: true
+
+management:
+  health:
+    db:
+      enabled: true
+    # Database health check with connection validation
+    datasource:
+      enabled: true
+
+logging:
+  level:
+    org.flywaydb: INFO
+    org.hibernate: WARN
+    org.springframework: INFO
+

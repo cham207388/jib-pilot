@@ -8,14 +8,46 @@ spring:
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
+    hikari:
+      # Connection pool settings for production
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+      pool-name: JibPilotHikariCP
   jpa:
     hibernate:
-      ddl-auto: update
+      # Use 'validate' in production to prevent schema changes
+      # Use 'none' if you want Flyway to be the only schema manager
+      ddl-auto: validate
       show-sql: false
       properties:
         hibernate:
           format_sql: true
           dialect: org.hibernate.dialect.PostgreSQLDialect
+          # Disable Hibernate schema generation in favor of Flyway
+          jdbc:
+            lob:
+              non_contextual_creation: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+    # Validate migrations on startup
+    validate-on-migrate: true
+    # Clean disabled in production (set via profile)
+    clean-disabled: true
+    # Encoding for SQL files
+    encoding: UTF-8
+    # Schema history table
+    table: flyway_schema_history
+    # Allow mixed migrations (versioned and repeatable)
+    mixed: true
+    # Group migrations (run all pending migrations in a single transaction)
+    group: false
   docker:
     compose:
       lifecycle-management: start-and-stop

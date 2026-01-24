@@ -11,6 +11,7 @@ Jib Pilot is a modern, production-ready Spring Boot application that provides a 
 - **Student Management**: Full CRUD operations for student records
 - **Course Management**: Create, read, update, and delete courses
 - **Enrollment System**: Students can enroll in and drop courses
+- **Full-Text Search**: BM25-ranked search for courses and students using pg_textsearch
 - **JWT Authentication**: Secure token-based authentication with configurable expiration
 - **Role-Based Access Control**: Two roles (ADMIN and STUDENT) with different permission levels
 - **API Documentation**: Interactive Swagger UI for API exploration
@@ -24,7 +25,8 @@ Jib Pilot is a modern, production-ready Spring Boot application that provides a 
 - **Framework**: Spring Boot 4.0.0
 - **Language**: Java 21
 - **Build Tool**: Gradle
-- **Database**: PostgreSQL (production), H2 (testing)
+- **Database**: PostgreSQL 17 (production), H2 (testing)
+- **Search**: pg_textsearch extension for BM25-ranked full-text search
 - **Security**: Spring Security with JWT (JSON Web Tokens)
 - **API Documentation**: SpringDoc OpenAPI (Swagger UI)
 - **Monitoring**: Spring Boot Actuator
@@ -37,7 +39,7 @@ Jib Pilot is a modern, production-ready Spring Boot application that provides a 
 
 - **Java 21** or higher
 - **Docker** and **Docker Compose** (for containerized deployment)
-- **PostgreSQL** (optional, if not using Docker Compose)
+- **PostgreSQL 17 or 18** (required for pg_textsearch, optional if not using Docker Compose)
 - **Gradle** (optional, wrapper included)
 
 ## Project Structure
@@ -70,7 +72,9 @@ jib-pilot/
 │   └── test/                      # Test classes
 ├── build.gradle                   # Build configuration
 ├── compose.yml                    # Development Docker Compose file
-└── Dockerfile                     # Development Dockerfile
+├── docker-compose-pg-search.yml   # Docker Compose with pg_textsearch
+├── Dockerfile                     # Development Dockerfile
+└── Dockerfile.postgres            # Custom PostgreSQL with pg_textsearch
 ```
 
 </details>
@@ -176,6 +180,31 @@ This setup:
 - Uses a strong default JWT secret
 - Runs `./gradlew bootRun` for hot reload
 
+### Development with Full-Text Search (pg_textsearch)
+
+For development with BM25-ranked full-text search capabilities:
+
+```bash
+make up-search
+# or
+docker compose -f docker-compose-pg-search.yml up --build
+```
+
+This setup:
+
+- Uses PostgreSQL 17 with pg_textsearch extension pre-installed
+- Includes all features from the standard development setup
+- Automatically enables search indexes via Flyway migrations
+- Uses a separate volume to avoid conflicts with the standard setup
+
+To stop the search-enabled stack:
+
+```bash
+make down-search
+# or
+docker compose -f docker-compose-pg-search.yml down -v
+```
+
 ### Production-like Container Deployment
 
 1. **Build the container image:**
@@ -252,8 +281,349 @@ To use Swagger UI:
 | PUT | `/api/v1/courses/{id}` | Update course | ADMIN |
 | DELETE | `/api/v1/courses/{id}` | Delete course | ADMIN |
 | GET | `/api/v1/courses/{id}/students` | Get students enrolled in course | ADMIN |
+| GET | `/api/v1/courses/search?q={query}&limit={limit}` | Search courses (BM25) | ADMIN, STUDENT |
+| GET | `/api/v1/students/search?q={query}&limit={limit}` | Search students (BM25) | ADMIN |
+
+#### Bulk Creation Endpoints
+
+<details>
+<summary>Click to open</summary>
+
+Bulk creation endpoints allow you to create multiple entities in a single request, improving efficiency for batch operations.
+
+##### Bulk Create Courses
+
+**Endpoint**: `POST /api/v1/courses/bulk`
+
+**Description**: Create multiple courses in a single request (up to 100 courses per request)
+
+**Role Required**: ADMIN
+
+**Request Body**:
+
+```json
+{
+  "courses": [
+    {
+      "code": "CS101",
+      "title": "Introduction to Computer Science",
+      "description": "Fundamentals of computer science and programming"
+    },
+    {
+      "code": "MATH201",
+      "title": "Calculus I",
+      "description": "Differential and integral calculus"
+    }
+  ]
+}
+```
+
+**Response**: `200 OK`
+
+```json
+[
+  {
+    "id": 1,
+    "code": "CS101",
+    "title": "Introduction to Computer Science",
+    "description": "Fundamentals of computer science and programming",
+    "studentIds": []
+  },
+  {
+    "id": 2,
+    "code": "MATH201",
+    "title": "Calculus I",
+    "description": "Differential and integral calculus",
+    "studentIds": []
+  }
+]
+```
+
+**Validation**:
+- At least one course is required
+- Maximum 100 courses per request
+- All course codes must be unique within the batch
+- Course codes must not conflict with existing courses
+
+**Error Responses**:
+- `400 Bad Request`: Invalid request body or validation errors
+- `409 Conflict`: Duplicate course codes in batch or conflict with existing courses
+
+##### Bulk Create Students
+
+**Endpoint**: `POST /api/v1/students/bulk`
+
+**Description**: Create multiple students in a single request (up to 100 students per request)
+
+**Role Required**: ADMIN
+
+**Request Body**:
+
+```json
+{
+  "students": [
+    {
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com",
+      "courseIds": [1, 2]
+    },
+    {
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "email": "jane.smith@example.com",
+      "courseIds": [1]
+    }
+  ]
+}
+```
+
+**Response**: `200 OK`
+
+```json
+[
+  {
+    "id": 1,
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
+    "courses": [
+      {
+        "id": 1,
+        "code": "CS101",
+        "title": "Introduction to Computer Science"
+      },
+      {
+        "id": 2,
+        "code": "MATH201",
+        "title": "Calculus I"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "firstName": "Jane",
+    "lastName": "Smith",
+    "email": "jane.smith@example.com",
+    "courses": [
+      {
+        "id": 1,
+        "code": "CS101",
+        "title": "Introduction to Computer Science"
+      }
+    ]
+  }
+]
+```
+
+**Validation**:
+- At least one student is required
+- Maximum 100 students per request
+- All emails must be unique within the batch
+- Emails must not conflict with existing students or users
+- Course IDs in `courseIds` must exist
+
+**Error Responses**:
+- `400 Bad Request`: Invalid request body or validation errors
+- `409 Conflict`: Duplicate emails in batch or conflict with existing students/users
+- `404 Not Found`: One or more course IDs in `courseIds` do not exist
+
+**Example Usage**:
+
+```bash
+# Bulk create courses
+curl -X POST "http://localhost:8085/api/v1/courses/bulk" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "courses": [
+      {"code": "CS101", "title": "Computer Science 101", "description": "Intro course"},
+      {"code": "MATH201", "title": "Calculus", "description": "Advanced math"}
+    ]
+  }'
+
+# Bulk create students
+curl -X POST "http://localhost:8085/api/v1/students/bulk" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "students": [
+      {"firstName": "John", "lastName": "Doe", "email": "john@example.com", "courseIds": [1]},
+      {"firstName": "Jane", "lastName": "Smith", "email": "jane@example.com", "courseIds": [1, 2]}
+    ]
+  }'
+```
 
 </details>
+
+</details>
+
+</details>
+
+## Full-Text Search
+
+<details>
+<summary>Click to open</summary>
+
+The application includes BM25-ranked full-text search capabilities powered by the `pg_textsearch` PostgreSQL extension. This provides production-ready search functionality directly within PostgreSQL without requiring external search engines like Elasticsearch.
+
+### Features
+
+- **BM25 Ranking**: Uses the same ranking algorithm as modern search engines (Google, etc.)
+- **Transactional Updates**: Search indexes update automatically within the same transaction as data changes
+- **Fast Top-K Queries**: Optimized for retrieving the most relevant results
+- **No External Dependencies**: All search functionality is handled within PostgreSQL
+
+### Prerequisites
+
+- **PostgreSQL 17 or 18**: Required for pg_textsearch extension
+- **pg_textsearch Extension**: Automatically installed when using `docker-compose-pg-search.yml`
+
+### Getting Started with Search
+
+1. **Start the search-enabled stack:**
+
+   ```bash
+   make up-search
+   ```
+
+   This will:
+   - Build a custom PostgreSQL 17 image with pg_textsearch extension
+   - Create BM25 indexes on courses and students
+   - Enable full-text search functionality
+
+2. **The search indexes are automatically created** via Flyway migration `V2__enable_pg_textsearch.sql`
+
+### Search Endpoints
+
+#### Search Courses
+
+Search across course titles and descriptions:
+
+```bash
+GET /api/v1/courses/search?q=computer science&limit=20
+Authorization: Bearer <token>
+```
+
+**Query Parameters:**
+- `q` (required): Search query string
+- `limit` (optional): Maximum number of results (default: 20)
+
+**Response:**
+
+```json
+[
+  {
+    "id": 1,
+    "code": "CS101",
+    "title": "Introduction to Computer Science",
+    "description": "Fundamentals of computer science and programming",
+    "studentIds": [1, 2, 3]
+  },
+  {
+    "id": 2,
+    "code": "CS201",
+    "title": "Data Structures",
+    "description": "Advanced computer science topics",
+    "studentIds": []
+  }
+]
+```
+
+#### Search Students
+
+Search across student names and email addresses:
+
+```bash
+GET /api/v1/students/search?q=john doe&limit=20
+Authorization: Bearer <token>
+```
+
+**Query Parameters:**
+- `q` (required): Search query string
+- `limit` (optional): Maximum number of results (default: 20)
+
+**Response:**
+
+```json
+[
+  {
+    "id": 1,
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
+    "courses": []
+  }
+]
+```
+
+### How It Works
+
+1. **Generated Columns**: The migration creates `search_text` generated columns that automatically combine relevant fields:
+   - `courses.search_text`: Combines `title` and `description`
+   - `students.search_text`: Combines `first_name`, `last_name`, and `email`
+
+2. **BM25 Indexes**: Indexes are created on the generated columns using the BM25 algorithm with English text configuration
+
+3. **Search Queries**: The `<@>` operator performs BM25 scoring and returns results ordered by relevance (lower scores = better matches)
+
+### Search Behavior
+
+- **Relevance Ranking**: Results are automatically ranked by relevance using BM25 scoring
+- **Term Frequency Saturation**: Prevents documents with repeated terms from ranking too high
+- **Document Length Normalization**: Adjusts scores based on document length
+- **Empty Queries**: Returns empty results if query is null or empty
+- **Case Insensitive**: Search is case-insensitive (handled by text search configuration)
+
+### Performance Considerations
+
+- **Index Auto-Detection**: The `<@>` operator automatically uses the appropriate BM25 index
+- **Top-K Optimization**: Queries with `LIMIT` clauses are optimized for fast retrieval
+- **Transactional Integrity**: Index updates happen in the same transaction as data changes
+- **Parallel Index Builds**: Large tables can benefit from parallel index creation
+
+### Example Usage
+
+**Search for courses:**
+
+```bash
+curl -X GET "http://localhost:8085/api/v1/courses/search?q=database&limit=10" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Search for students:**
+
+```bash
+curl -X GET "http://localhost:8085/api/v1/students/search?q=smith&limit=20" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Makefile Commands
+
+The Makefile includes convenient commands for managing the search-enabled stack:
+
+```bash
+make up-search    # Start the pg_textsearch stack
+make down-search  # Stop the pg_textsearch stack
+```
+
+### Troubleshooting
+
+**Issue**: Search endpoints return empty results
+
+- **Solution**: Ensure you're using `docker-compose-pg-search.yml` (not `compose.yml`)
+- **Solution**: Verify the migration `V2__enable_pg_textsearch.sql` ran successfully
+- **Solution**: Check that the `pg_textsearch` extension is enabled: `SELECT * FROM pg_extension WHERE extname = 'pg_textsearch';`
+
+**Issue**: Search queries are slow
+
+- **Solution**: Ensure BM25 indexes exist: `SELECT indexname FROM pg_indexes WHERE indexdef LIKE '%USING bm25%';`
+- **Solution**: Check query execution plan with `EXPLAIN` to verify index usage
+- **Solution**: For large datasets, consider creating indexes after data load
+
+**Issue**: Migration fails with "BM25 indexes on expressions are not supported"
+
+- **Solution**: This is already handled - the migration uses generated columns instead of expressions
 
 </details>
 
@@ -1052,6 +1422,16 @@ The Jib configuration in `build.gradle` includes:
 - Automatic layer caching for Spring Boot
 
 ## Database Schema
+
+### Search Functionality
+
+The application uses generated columns and BM25 indexes for full-text search:
+
+- **courses.search_text**: Generated column combining `title` and `description`
+- **students.search_text**: Generated column combining `first_name`, `last_name`, and `email`
+- **BM25 Indexes**: Created on `search_text` columns for fast relevance-ranked search
+
+These are automatically created by Flyway migration `V2__enable_pg_textsearch.sql` when using the search-enabled Docker Compose setup.
 
 ### Entities
 

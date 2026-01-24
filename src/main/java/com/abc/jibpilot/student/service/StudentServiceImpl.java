@@ -132,6 +132,53 @@ public class StudentServiceImpl implements StudentService {
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<StudentResponse> searchStudents(String query, int limit) {
+        if (query == null || query.trim().isEmpty()) {
+            return List.of();
+        }
+        return studentRepository.searchStudents(query.trim(), limit)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Override
+    public List<StudentResponse> bulkCreateStudents(List<CreateStudentRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            return List.of();
+        }
+
+        // Validate all emails are unique within the batch
+        Set<String> emailsInBatch = requests.stream()
+                .map(CreateStudentRequest::email)
+                .collect(Collectors.toSet());
+        if (emailsInBatch.size() != requests.size()) {
+            throw new ResponseStatusException(CONFLICT, "Duplicate emails found in batch");
+        }
+
+        // Validate emails don't conflict with existing students/users
+        for (CreateStudentRequest request : requests) {
+            ensureEmailIsUnique(request.email(), null);
+        }
+
+        // Create all students
+        List<Student> students = requests.stream()
+                .map(request -> Student.builder()
+                        .firstName(request.firstName())
+                        .lastName(request.lastName())
+                        .email(request.email())
+                        .courses(resolveCourses(request.courseIds()))
+                        .build())
+                .toList();
+
+        return studentRepository.saveAll(students)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     private StudentResponse toResponse(Student student) {
         return new StudentResponse(
                 student.getId(),

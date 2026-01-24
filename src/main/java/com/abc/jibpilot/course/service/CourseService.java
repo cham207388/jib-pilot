@@ -16,4 +16,8 @@ public interface CourseService {
     CourseResponse updateCourse(Long id, UpdateCourseRequest request);
 
     void deleteCourse(Long id);
+
+    List<CourseResponse> searchCourses(String query, int limit);
+
+    List<CourseResponse> bulkCreateCourses(List<CreateCourseRequest> requests);
 }

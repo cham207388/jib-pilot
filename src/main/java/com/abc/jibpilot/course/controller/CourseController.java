@@ -1,5 +1,6 @@
 package com.abc.jibpilot.course.controller;
 
+import com.abc.jibpilot.course.dto.BulkCreateCourseRequest;
 import com.abc.jibpilot.course.dto.CourseResponse;
 import com.abc.jibpilot.course.dto.CreateCourseRequest;
 import com.abc.jibpilot.course.dto.UpdateCourseRequest;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -49,6 +51,14 @@ public class CourseController {
         return ResponseEntity.created(location).build();
     }
 
+    @PostMapping("/bulk")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<CourseResponse>> bulkCreateCourses(@Valid @RequestBody BulkCreateCourseRequest request) {
+        log.info("Bulk creating {} courses", request.courses().size());
+        List<CourseResponse> createdCourses = courseService.bulkCreateCourses(request.courses());
+        return ResponseEntity.ok(createdCourses);
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','STUDENT')")
     public ResponseEntity<CourseResponse> getCourse(@PathVariable Long id) {
@@ -59,6 +69,15 @@ public class CourseController {
     @PreAuthorize("hasAnyRole('ADMIN','STUDENT')")
     public ResponseEntity<List<CourseResponse>> getAllCourses() {
         return ResponseEntity.ok(courseService.getAllCourses());
+    }
+
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('ADMIN','STUDENT')")
+    public ResponseEntity<List<CourseResponse>> searchCourses(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "20") int limit) {
+        log.info("Searching courses with query: '{}', limit: {}", q, limit);
+        return ResponseEntity.ok(courseService.searchCourses(q, limit));
     }
 
     @PutMapping("/{id}")

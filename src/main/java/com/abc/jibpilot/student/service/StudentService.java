@@ -22,4 +22,8 @@ public interface StudentService {
     StudentResponse removeStudentFromCourse(Long studentId, Long courseId);
 
     List<StudentResponse> getStudentsByCourse(Long courseId);
+
+    List<StudentResponse> searchStudents(String query, int limit);
+
+    List<StudentResponse> bulkCreateStudents(List<CreateStudentRequest> requests);
 }

@@ -1,0 +1,35 @@
+# Dockerfile for PostgreSQL 17 with pg_textsearch extension
+# Using Debian-based image for better clang/LLVM support
+FROM postgres:17
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    ca-certificates \
+    postgresql-server-dev-17 \
+    clang \
+    llvm \
+    make \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /tmp
+
+# Clone and build pg_textsearch
+RUN git config --global http.sslVerify true && \
+    git clone https://github.com/timescale/pg_textsearch.git && \
+    cd pg_textsearch && \
+    # Create symlink for clang-19 if clang exists but clang-19 doesn't
+    (command -v clang-19 >/dev/null 2>&1 || \
+     (command -v clang >/dev/null 2>&1 && ln -sf $(which clang) /usr/bin/clang-19)) && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf pg_textsearch
+
+# Clean up build dependencies (optional - keep for debugging)
+# RUN apk del build-base git clang make cmake
+
+# The extension will be available when PostgreSQL starts
+# Enable it in the database using: CREATE EXTENSION pg_textsearch;

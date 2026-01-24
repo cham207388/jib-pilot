@@ -582,21 +582,401 @@ Authorization: Bearer <token>
 - **Transactional Integrity**: Index updates happen in the same transaction as data changes
 - **Parallel Index Builds**: Large tables can benefit from parallel index creation
 
-### Example Usage
+### How to Use the Search Endpoints
 
-**Search for courses:**
+This guide provides step-by-step instructions on using the pg_textsearch endpoints with real data examples.
+
+#### Step 1: Setup Sample Data
+
+First, let's create some sample courses and students to search through. You'll need an admin JWT token.
+
+**Create Sample Courses:**
+
+```bash
+# Get your admin JWT token first by logging in
+TOKEN="YOUR_ADMIN_JWT_TOKEN"
+
+# Create multiple courses
+curl -X POST "http://localhost:8085/api/v1/courses/bulk" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "courses": [
+      {
+        "code": "CS101",
+        "title": "Introduction to Computer Science",
+        "description": "Fundamentals of computer science, programming, and algorithms"
+      },
+      {
+        "code": "CS201",
+        "title": "Data Structures and Algorithms",
+        "description": "Advanced data structures, trees, graphs, and algorithm design"
+      },
+      {
+        "code": "MATH101",
+        "title": "Calculus I",
+        "description": "Differential and integral calculus, limits, derivatives"
+      },
+      {
+        "code": "DB301",
+        "title": "Database Systems",
+        "description": "Relational databases, SQL, query optimization, and database design"
+      },
+      {
+        "code": "WEB401",
+        "title": "Web Development",
+        "description": "HTML, CSS, JavaScript, and modern web frameworks"
+      }
+    ]
+  }'
+```
+
+**Create Sample Students:**
+
+```bash
+curl -X POST "http://localhost:8085/api/v1/students/bulk" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "students": [
+      {
+        "firstName": "John",
+        "lastName": "Smith",
+        "email": "john.smith@university.edu",
+        "courseIds": [1, 2]
+      },
+      {
+        "firstName": "Jane",
+        "lastName": "Doe",
+        "email": "jane.doe@university.edu",
+        "courseIds": [1, 3]
+      },
+      {
+        "firstName": "Bob",
+        "lastName": "Johnson",
+        "email": "bob.johnson@university.edu",
+        "courseIds": [2, 4]
+      },
+      {
+        "firstName": "Alice",
+        "lastName": "Williams",
+        "email": "alice.williams@university.edu",
+        "courseIds": [3, 5]
+      },
+      {
+        "firstName": "Charlie",
+        "lastName": "Brown",
+        "email": "charlie.brown@university.edu",
+        "courseIds": [1, 4, 5]
+      }
+    ]
+  }'
+```
+
+#### Step 2: Search Courses
+
+The search endpoint searches across course **titles** and **descriptions** using BM25 ranking.
+
+**Example 1: Search for "computer science"**
+
+```bash
+curl -X GET "http://localhost:8085/api/v1/courses/search?q=computer%20science&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Expected Response:**
+
+```json
+[
+  {
+    "id": 1,
+    "code": "CS101",
+    "title": "Introduction to Computer Science",
+    "description": "Fundamentals of computer science, programming, and algorithms",
+    "studentIds": [1, 2, 5]
+  },
+  {
+    "id": 2,
+    "code": "CS201",
+    "title": "Data Structures and Algorithms",
+    "description": "Advanced data structures, trees, graphs, and algorithm design",
+    "studentIds": [1, 3]
+  }
+]
+```
+
+**What to Expect:**
+- Results are ranked by relevance (most relevant first)
+- "CS101" appears first because it contains "Computer Science" in the title
+- "CS201" appears second because it's related but doesn't have the exact phrase
+- Both courses match because they contain "computer" and "science" terms
+
+**Example 2: Search for "database"**
 
 ```bash
 curl -X GET "http://localhost:8085/api/v1/courses/search?q=database&limit=10" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
-**Search for students:**
+**Expected Response:**
+
+```json
+[
+  {
+    "id": 4,
+    "code": "DB301",
+    "title": "Database Systems",
+    "description": "Relational databases, SQL, query optimization, and database design",
+    "studentIds": [3, 5]
+  }
+]
+```
+
+**What to Expect:**
+- Only the "Database Systems" course matches
+- The word "database" appears multiple times in the description, which increases its relevance score
+- Results are limited to 10 by default (you can change this with the `limit` parameter)
+
+**Example 3: Search for "web"**
 
 ```bash
-curl -X GET "http://localhost:8085/api/v1/students/search?q=smith&limit=20" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+curl -X GET "http://localhost:8085/api/v1/courses/search?q=web&limit=5" \
+  -H "Authorization: Bearer $TOKEN"
 ```
+
+**Expected Response:**
+
+```json
+[
+  {
+    "id": 5,
+    "code": "WEB401",
+    "title": "Web Development",
+    "description": "HTML, CSS, JavaScript, and modern web frameworks",
+    "studentIds": [4, 5]
+  }
+]
+```
+
+**What to Expect:**
+- Partial word matching works (searches for "web" will find "Web Development")
+- Case-insensitive search (you can search "WEB", "web", or "Web" and get the same results)
+
+**Example 4: Search with no matches**
+
+```bash
+curl -X GET "http://localhost:8085/api/v1/courses/search?q=quantum%20physics&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Expected Response:**
+
+```json
+[]
+```
+
+**What to Expect:**
+- Empty array when no courses match the search query
+- No error is returned - this is the expected behavior for no matches
+
+#### Step 3: Search Students
+
+The search endpoint searches across student **first names**, **last names**, and **email addresses**.
+
+**Example 1: Search for "john"**
+
+```bash
+curl -X GET "http://localhost:8085/api/v1/students/search?q=john&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Expected Response:**
+
+```json
+[
+  {
+    "id": 1,
+    "firstName": "John",
+    "lastName": "Smith",
+    "email": "john.smith@university.edu",
+    "courses": [
+      {
+        "id": 1,
+        "code": "CS101",
+        "title": "Introduction to Computer Science"
+      },
+      {
+        "id": 2,
+        "code": "CS201",
+        "title": "Data Structures and Algorithms"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "firstName": "Bob",
+    "lastName": "Johnson",
+    "email": "bob.johnson@university.edu",
+    "courses": [
+      {
+        "id": 2,
+        "code": "CS201",
+        "title": "Data Structures and Algorithms"
+      },
+      {
+        "id": 4,
+        "code": "DB301",
+        "title": "Database Systems"
+      }
+    ]
+  }
+]
+```
+
+**What to Expect:**
+- "John Smith" appears first (exact first name match)
+- "Bob Johnson" appears second (last name contains "john")
+- Both students' emails also contain "john", which contributes to the match
+- Results include the full student object with enrolled courses
+
+**Example 2: Search for "smith"**
+
+```bash
+curl -X GET "http://localhost:8085/api/v1/students/search?q=smith&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Expected Response:**
+
+```json
+[
+  {
+    "id": 1,
+    "firstName": "John",
+    "lastName": "Smith",
+    "email": "john.smith@university.edu",
+    "courses": [
+      {
+        "id": 1,
+        "code": "CS101",
+        "title": "Introduction to Computer Science"
+      },
+      {
+        "id": 2,
+        "code": "CS201",
+        "title": "Data Structures and Algorithms"
+      }
+    ]
+  }
+]
+```
+
+**What to Expect:**
+- Only "John Smith" matches (last name contains "smith")
+- The email also contains "smith", which helps with relevance scoring
+
+**Example 3: Search for email domain**
+
+```bash
+curl -X GET "http://localhost:8085/api/v1/students/search?q=university.edu&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Expected Response:**
+
+```json
+[
+  {
+    "id": 1,
+    "firstName": "John",
+    "lastName": "Smith",
+    "email": "john.smith@university.edu",
+    "courses": [...]
+  },
+  {
+    "id": 2,
+    "firstName": "Jane",
+    "lastName": "Doe",
+    "email": "jane.doe@university.edu",
+    "courses": [...]
+  },
+  {
+    "id": 3,
+    "firstName": "Bob",
+    "lastName": "Johnson",
+    "email": "bob.johnson@university.edu",
+    "courses": [...]
+  },
+  {
+    "id": 4,
+    "firstName": "Alice",
+    "lastName": "Williams",
+    "email": "alice.williams@university.edu",
+    "courses": [...]
+  },
+  {
+    "id": 5,
+    "firstName": "Charlie",
+    "lastName": "Brown",
+    "email": "charlie.brown@university.edu",
+    "courses": [...]
+  }
+]
+```
+
+**What to Expect:**
+- All students match because they all have "@university.edu" in their email
+- Results are still ranked by relevance (though in this case, all have similar scores)
+- The `limit` parameter controls how many results are returned (default is 20)
+
+#### Step 4: Understanding Search Behavior
+
+**Key Points:**
+
+1. **Relevance Ranking**: Results are automatically sorted by relevance using BM25 algorithm. Lower scores mean better matches.
+
+2. **Multi-field Search**: 
+   - Courses: Searches both title AND description
+   - Students: Searches first name, last name, AND email
+
+3. **Partial Matching**: You don't need exact phrases. Searching "comp" will find "Computer Science".
+
+4. **Case Insensitive**: Search is case-insensitive. "JOHN", "john", and "John" all return the same results.
+
+5. **Empty Queries**: If you pass an empty or whitespace-only query, you'll get an empty array `[]`.
+
+6. **Limit Parameter**: 
+   - Default: 20 results
+   - Maximum: No hard limit, but keep it reasonable (e.g., 100)
+   - Use smaller limits for better performance
+
+**Common Search Patterns:**
+
+```bash
+# Single word search
+GET /api/v1/courses/search?q=programming&limit=10
+
+# Multi-word search (searches for all terms)
+GET /api/v1/courses/search?q=computer%20science&limit=10
+
+# Search with custom limit
+GET /api/v1/students/search?q=smith&limit=5
+
+# URL encoding: spaces become %20, special characters are encoded
+# "computer science" → "computer%20science"
+```
+
+**What Gets Searched:**
+
+- **Courses**: `title + " " + description` (combined into `search_text` column)
+- **Students**: `first_name + " " + last_name + " " + email` (combined into `search_text` column)
+
+**Performance Notes:**
+
+- Search uses BM25 indexes for fast retrieval
+- Results are pre-ranked by the database
+- The `LIMIT` clause ensures only the top results are returned
+- Search indexes update automatically when data changes
 
 ### Makefile Commands
 

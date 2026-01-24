@@ -18,7 +18,7 @@ down: ## Stop compose stack
 	$(COMPOSE) -f $(COMPOSE_FILE) down -v
 
 up-search: ## Start compose stack with pg_textsearch
-	$(COMPOSE) -f docker-compose-pg-search.yml up -d
+	$(COMPOSE) -f docker-compose-pg-search.yml up -d --build
 
 down-search: ## Stop compose stack with pg_textsearch
 	$(COMPOSE) -f docker-compose-pg-search.yml down -v

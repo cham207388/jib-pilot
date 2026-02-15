@@ -1962,6 +1962,8 @@ Edit `src/main/newrelic/newrelic.yml` to adjust:
 
 ---
 
+## Commit Message Format
+
 <details>
 <summary>Commit Message Format</summary>
 

@@ -1,0 +1,245 @@
+# =============================================================================
+# .dockerignore - Exclude files from Docker build context
+# =============================================================================
+# This file prevents unnecessary files from being sent to the Docker daemon,
+# reducing build context size, improving build speed, and enhancing security.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Build Artifacts & Gradle Cache
+# -----------------------------------------------------------------------------
+# Exclude build outputs - these will be generated during Docker build
+build/
+.gradle/
+.gradletasknamecache
+gradle-app.setting
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# -----------------------------------------------------------------------------
+# Version Control
+# -----------------------------------------------------------------------------
+.git/
+.gitignore
+.gitattributes
+.gitmodules
+.gitkeep
+
+# -----------------------------------------------------------------------------
+# IDE & Editor Files
+# -----------------------------------------------------------------------------
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Eclipse / STS
+.apt_generated/
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# NetBeans
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# Cursor / Other Editors
+.cursor/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# -----------------------------------------------------------------------------
+# Test Files & Test Resources
+# -----------------------------------------------------------------------------
+# Exclude test source code and resources - not needed in production image
+src/test/
+**/*Test.java
+**/*Tests.java
+**/*IT.java
+**/*IntTest.java
+**/test/
+**/tests/
+
+# -----------------------------------------------------------------------------
+# Documentation & Help Files
+# -----------------------------------------------------------------------------
+README.md
+HELP.md
+*.md
+!scripts/README.md
+docs/
+documentation/
+CHANGELOG.md
+LICENSE
+LICENSE.txt
+NOTICE
+NOTICE.txt
+
+# -----------------------------------------------------------------------------
+# CI/CD & Workflow Files
+# -----------------------------------------------------------------------------
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+Jenkinsfile
+azure-pipelines.yml
+
+# -----------------------------------------------------------------------------
+# Docker Files (to avoid recursive copying)
+# -----------------------------------------------------------------------------
+Dockerfile*
+docker-compose*.yml
+compose.yml
+.dockerignore
+.docker/
+
+# -----------------------------------------------------------------------------
+# Scripts (unless needed in container)
+# -----------------------------------------------------------------------------
+scripts/
+Makefile
+*.sh
+*.bat
+*.cmd
+!gradlew
+!gradlew.bat
+
+# -----------------------------------------------------------------------------
+# Configuration Files (sensitive or local-only)
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.local
+*.local.yml
+*.local.properties
+secrets/
+.secrets/
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+*.keystore
+*.truststore
+
+# -----------------------------------------------------------------------------
+# Logs & Temporary Files
+# -----------------------------------------------------------------------------
+*.log
+logs/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.swp
+*.swo
+*~
+.cache/
+tmp/
+temp/
+
+# -----------------------------------------------------------------------------
+# OS-Specific Files
+# -----------------------------------------------------------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+.directory
+.Trash-*
+
+# -----------------------------------------------------------------------------
+# Package Manager Files
+# -----------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# -----------------------------------------------------------------------------
+# Coverage & Reports
+# -----------------------------------------------------------------------------
+.nyc_output/
+coverage/
+*.lcov
+.coverage
+htmlcov/
+.pytest_cache/
+.coverage.*
+junit.xml
+test-results/
+test-reports/
+build/reports/
+build/test-results/
+
+# -----------------------------------------------------------------------------
+# Profiling & Debugging
+# -----------------------------------------------------------------------------
+*.hprof
+*.prof
+*.trace
+*.dump
+heap-dump/
+thread-dump/
+
+# -----------------------------------------------------------------------------
+# Miscellaneous
+# -----------------------------------------------------------------------------
+# Linting & Code Quality
+.markdownlint.yml
+.eslintrc*
+.prettierrc*
+.editorconfig
+.checkstyle
+findbugs-exclude.xml
+pmd-rules.xml
+
+# Application-specific excludes
+# Add any project-specific files or directories here
+*.pid
+*.seed
+*.pid.lock
+
+# -----------------------------------------------------------------------------
+# Keep Essential Files (explicitly include if needed)
+# -----------------------------------------------------------------------------
+# These patterns ensure essential files are NOT excluded
+# (Docker will include them by default, but being explicit)
+!gradlew
+!gradlew.bat
+!settings.gradle
+!build.gradle
+!gradle/wrapper/
+!src/main/
+!.gitignore

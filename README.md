@@ -11,6 +11,7 @@ Jib Pilot is a modern, production-ready Spring Boot application that provides a 
 - **Student Management**: Full CRUD operations for student records
 - **Course Management**: Create, read, update, and delete courses
 - **Enrollment System**: Students can enroll in and drop courses
+- **Full-Text Search**: BM25-ranked search for courses and students using pg_textsearch
 - **JWT Authentication**: Secure token-based authentication with configurable expiration
 - **Role-Based Access Control**: Two roles (ADMIN and STUDENT) with different permission levels
 - **API Documentation**: Interactive Swagger UI for API exploration
@@ -24,7 +25,8 @@ Jib Pilot is a modern, production-ready Spring Boot application that provides a 
 - **Framework**: Spring Boot 4.0.0
 - **Language**: Java 21
 - **Build Tool**: Gradle
-- **Database**: PostgreSQL (production), H2 (testing)
+- **Database**: PostgreSQL 17 (production), H2 (testing)
+- **Search**: pg_textsearch extension for BM25-ranked full-text search
 - **Security**: Spring Security with JWT (JSON Web Tokens)
 - **API Documentation**: SpringDoc OpenAPI (Swagger UI)
 - **Monitoring**: Spring Boot Actuator
@@ -37,7 +39,7 @@ Jib Pilot is a modern, production-ready Spring Boot application that provides a 
 
 - **Java 21** or higher
 - **Docker** and **Docker Compose** (for containerized deployment)
-- **PostgreSQL** (optional, if not using Docker Compose)
+- **PostgreSQL 17 or 18** (required for pg_textsearch, optional if not using Docker Compose)
 - **Gradle** (optional, wrapper included)
 
 ## Project Structure
@@ -55,22 +57,24 @@ jib-pilot/
 │   │   │   │   ├── controller/    # Auth endpoints
 │   │   │   │   ├── dto/           # Data transfer objects
 │   │   │   │   ├── entity/        # UserAccount entity
-│   │   │   │   ├── filter/       # JWT authentication filter
-│   │   │   │   ├── model/        # Security models (Role, AppUserDetails)
-│   │   │   │   ├── repository/   # User repository
-│   │   │   │   └── service/      # Auth services
-│   │   │   ├── config/           # Configuration classes
-│   │   │   ├── course/           # Course management
-│   │   │   ├── security/         # Security utilities
-│   │   │   └── student/          # Student management
-│   │   └── resources/
-│   │       ├── application.yml   # Application configuration
-│   │       └── static/           # Static resources
-│   └── test/                     # Test classes
+│   │   │   │   ├── filter/        # JWT authentication filter
+│   │   │   │   ├── model/         # Security models (Role, AppUserDetails)
+│   │   │   │   ├── repository/    # User repository
+│   │   │   │   └── service/       # Auth services
+│   │   │   ├── config/            # Configuration classes
+│   │   │   ├── course/            # Course management
+│   │   │   ├── security/          # Security utilities
+│   │   │   └── student/           # Student management
+│   │   └── resources/ 
+│   │       ├── application.yml    # Application configuration
+│   │       ├── newrelic.yml       # New Relic configuration
+│   │       └── static/            # Static resources
+│   └── test/                      # Test classes
 ├── build.gradle                   # Build configuration
-├── docker-compose.yml            # Production Docker Compose
-├── docker-compose.dev.yml        # Development Docker Compose
-└── Dockerfile.dev                # Development Dockerfile
+├── compose.yml                    # Development Docker Compose file
+├── docker-compose-pg-search.yml   # Docker Compose with pg_textsearch
+├── Dockerfile                     # Development Dockerfile
+└── Dockerfile.postgres            # Custom PostgreSQL with pg_textsearch
 ```
 
 </details>
@@ -166,7 +170,7 @@ PY
 Use the development Docker Compose setup for hot reload:
 
 ```bash
-docker compose -f docker-compose.dev.yml up --build
+docker compose -f compose.yml up --build
 ```
 
 This setup:
@@ -175,6 +179,31 @@ This setup:
 - Includes PostgreSQL
 - Uses a strong default JWT secret
 - Runs `./gradlew bootRun` for hot reload
+
+### Development with Full-Text Search (pg_textsearch)
+
+For development with BM25-ranked full-text search capabilities:
+
+```bash
+make up-search
+# or
+docker compose -f docker-compose-pg-search.yml up --build
+```
+
+This setup:
+
+- Uses PostgreSQL 17 with pg_textsearch extension pre-installed
+- Includes all features from the standard development setup
+- Automatically enables search indexes via Flyway migrations
+- Uses a separate volume to avoid conflicts with the standard setup
+
+To stop the search-enabled stack:
+
+```bash
+make down-search
+# or
+docker compose -f docker-compose-pg-search.yml down -v
+```
 
 ### Production-like Container Deployment
 
@@ -192,7 +221,7 @@ This setup:
 
    The compose file expects the image `baicham/jib-pilot:latest` and exposes the app on port `8080`.
 
-> **Note**: Use one compose file per scenario: `docker-compose.dev.yml` for local development; `docker-compose.yml` with `jibDockerBuild` image for production-like runs.
+> **Note**: Use one compose file per scenario: `compose.yml` for local development; `docker-compose.yml` with `jibDockerBuild` image for production-like runs.
 
 ## API Documentation
 
@@ -252,9 +281,729 @@ To use Swagger UI:
 | PUT | `/api/v1/courses/{id}` | Update course | ADMIN |
 | DELETE | `/api/v1/courses/{id}` | Delete course | ADMIN |
 | GET | `/api/v1/courses/{id}/students` | Get students enrolled in course | ADMIN |
+| GET | `/api/v1/courses/search?q={query}&limit={limit}` | Search courses (BM25) | ADMIN, STUDENT |
+| GET | `/api/v1/students/search?q={query}&limit={limit}` | Search students (BM25) | ADMIN |
+
+#### Bulk Creation Endpoints
+
+<details>
+<summary>Click to open</summary>
+
+Bulk creation endpoints allow you to create multiple entities in a single request, improving efficiency for batch operations.
+
+##### Bulk Create Courses
+
+**Endpoint**: `POST /api/v1/courses/bulk`
+
+**Description**: Create multiple courses in a single request (up to 100 courses per request)
+
+**Role Required**: ADMIN
+
+**Request Body**:
+
+```json
+{
+  "courses": [
+    {
+      "code": "CS101",
+      "title": "Introduction to Computer Science",
+      "description": "Fundamentals of computer science and programming"
+    },
+    {
+      "code": "MATH201",
+      "title": "Calculus I",
+      "description": "Differential and integral calculus"
+    }
+  ]
+}
+```
+
+**Response**: `200 OK`
+
+```json
+[
+  {
+    "id": 1,
+    "code": "CS101",
+    "title": "Introduction to Computer Science",
+    "description": "Fundamentals of computer science and programming",
+    "studentIds": []
+  },
+  {
+    "id": 2,
+    "code": "MATH201",
+    "title": "Calculus I",
+    "description": "Differential and integral calculus",
+    "studentIds": []
+  }
+]
+```
+
+**Validation**:
+- At least one course is required
+- Maximum 100 courses per request
+- All course codes must be unique within the batch
+- Course codes must not conflict with existing courses
+
+**Error Responses**:
+- `400 Bad Request`: Invalid request body or validation errors
+- `409 Conflict`: Duplicate course codes in batch or conflict with existing courses
+
+##### Bulk Create Students
+
+**Endpoint**: `POST /api/v1/students/bulk`
+
+**Description**: Create multiple students in a single request (up to 100 students per request)
+
+**Role Required**: ADMIN
+
+**Request Body**:
+
+```json
+{
+  "students": [
+    {
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com",
+      "courseIds": [1, 2]
+    },
+    {
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "email": "jane.smith@example.com",
+      "courseIds": [1]
+    }
+  ]
+}
+```
+
+**Response**: `200 OK`
+
+```json
+[
+  {
+    "id": 1,
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
+    "courses": [
+      {
+        "id": 1,
+        "code": "CS101",
+        "title": "Introduction to Computer Science"
+      },
+      {
+        "id": 2,
+        "code": "MATH201",
+        "title": "Calculus I"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "firstName": "Jane",
+    "lastName": "Smith",
+    "email": "jane.smith@example.com",
+    "courses": [
+      {
+        "id": 1,
+        "code": "CS101",
+        "title": "Introduction to Computer Science"
+      }
+    ]
+  }
+]
+```
+
+**Validation**:
+- At least one student is required
+- Maximum 100 students per request
+- All emails must be unique within the batch
+- Emails must not conflict with existing students or users
+- Course IDs in `courseIds` must exist
+
+**Error Responses**:
+- `400 Bad Request`: Invalid request body or validation errors
+- `409 Conflict`: Duplicate emails in batch or conflict with existing students/users
+- `404 Not Found`: One or more course IDs in `courseIds` do not exist
+
+**Example Usage**:
+
+```bash
+# Bulk create courses
+curl -X POST "http://localhost:8085/api/v1/courses/bulk" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "courses": [
+      {"code": "CS101", "title": "Computer Science 101", "description": "Intro course"},
+      {"code": "MATH201", "title": "Calculus", "description": "Advanced math"}
+    ]
+  }'
+
+# Bulk create students
+curl -X POST "http://localhost:8085/api/v1/students/bulk" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "students": [
+      {"firstName": "John", "lastName": "Doe", "email": "john@example.com", "courseIds": [1]},
+      {"firstName": "Jane", "lastName": "Smith", "email": "jane@example.com", "courseIds": [1, 2]}
+    ]
+  }'
+```
 
 </details>
 
+</details>
+
+</details>
+
+## Full-Text Search
+
+<details>
+<summary>Click to open</summary>
+
+The application includes BM25-ranked full-text search capabilities powered by the `pg_textsearch` PostgreSQL extension. This provides production-ready search functionality directly within PostgreSQL without requiring external search engines like Elasticsearch.
+
+### Features
+
+- **BM25 Ranking**: Uses the same ranking algorithm as modern search engines (Google, etc.)
+- **Transactional Updates**: Search indexes update automatically within the same transaction as data changes
+- **Fast Top-K Queries**: Optimized for retrieving the most relevant results
+- **No External Dependencies**: All search functionality is handled within PostgreSQL
+
+### Prerequisites
+
+- **PostgreSQL 17 or 18**: Required for pg_textsearch extension
+- **pg_textsearch Extension**: Automatically installed when using `docker-compose-pg-search.yml`
+
+### Getting Started with Search
+
+1. **Start the search-enabled stack:**
+
+   ```bash
+   make up-search
+   ```
+
+   This will:
+   - Build a custom PostgreSQL 17 image with pg_textsearch extension
+   - Create BM25 indexes on courses and students
+   - Enable full-text search functionality
+
+2. **The search indexes are automatically created** via Flyway migration `V2__enable_pg_textsearch.sql`
+
+### Search Endpoints
+
+#### Search Courses
+
+Search across course titles and descriptions:
+
+```bash
+GET /api/v1/courses/search?q=computer science&limit=20
+Authorization: Bearer <token>
+```
+
+**Query Parameters:**
+- `q` (required): Search query string
+- `limit` (optional): Maximum number of results (default: 20)
+
+**Response:**
+
+```json
+[
+  {
+    "id": 1,
+    "code": "CS101",
+    "title": "Introduction to Computer Science",
+    "description": "Fundamentals of computer science and programming",
+    "studentIds": [1, 2, 3]
+  },
+  {
+    "id": 2,
+    "code": "CS201",
+    "title": "Data Structures",
+    "description": "Advanced computer science topics",
+    "studentIds": []
+  }
+]
+```
+
+#### Search Students
+
+Search across student names and email addresses:
+
+```bash
+GET /api/v1/students/search?q=john doe&limit=20
+Authorization: Bearer <token>
+```
+
+**Query Parameters:**
+- `q` (required): Search query string
+- `limit` (optional): Maximum number of results (default: 20)
+
+**Response:**
+
+```json
+[
+  {
+    "id": 1,
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
+    "courses": []
+  }
+]
+```
+
+### How It Works
+
+1. **Generated Columns**: The migration creates `search_text` generated columns that automatically combine relevant fields:
+   - `courses.search_text`: Combines `title` and `description`
+   - `students.search_text`: Combines `first_name`, `last_name`, and `email`
+
+2. **BM25 Indexes**: Indexes are created on the generated columns using the BM25 algorithm with English text configuration
+
+3. **Search Queries**: The `<@>` operator performs BM25 scoring and returns results ordered by relevance (lower scores = better matches)
+
+### Search Behavior
+
+- **Relevance Ranking**: Results are automatically ranked by relevance using BM25 scoring
+- **Term Frequency Saturation**: Prevents documents with repeated terms from ranking too high
+- **Document Length Normalization**: Adjusts scores based on document length
+- **Empty Queries**: Returns empty results if query is null or empty
+- **Case Insensitive**: Search is case-insensitive (handled by text search configuration)
+
+### Performance Considerations
+
+- **Index Auto-Detection**: The `<@>` operator automatically uses the appropriate BM25 index
+- **Top-K Optimization**: Queries with `LIMIT` clauses are optimized for fast retrieval
+- **Transactional Integrity**: Index updates happen in the same transaction as data changes
+- **Parallel Index Builds**: Large tables can benefit from parallel index creation
+
+### How to Use the Search Endpoints
+
+This guide provides step-by-step instructions on using the pg_textsearch endpoints with real data examples.
+
+#### Step 1: Setup Sample Data
+
+First, let's create some sample courses and students to search through. You'll need an admin JWT token.
+
+**Create Sample Courses:**
+
+```bash
+# Get your admin JWT token first by logging in
+TOKEN="YOUR_ADMIN_JWT_TOKEN"
+
+# Create multiple courses
+curl -X POST "http://localhost:8085/api/v1/courses/bulk" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "courses": [
+      {
+        "code": "CS101",
+        "title": "Introduction to Computer Science",
+        "description": "Fundamentals of computer science, programming, and algorithms"
+      },
+      {
+        "code": "CS201",
+        "title": "Data Structures and Algorithms",
+        "description": "Advanced data structures, trees, graphs, and algorithm design"
+      },
+      {
+        "code": "MATH101",
+        "title": "Calculus I",
+        "description": "Differential and integral calculus, limits, derivatives"
+      },
+      {
+        "code": "DB301",
+        "title": "Database Systems",
+        "description": "Relational databases, SQL, query optimization, and database design"
+      },
+      {
+        "code": "WEB401",
+        "title": "Web Development",
+        "description": "HTML, CSS, JavaScript, and modern web frameworks"
+      }
+    ]
+  }'
+```
+
+**Create Sample Students:**
+
+```bash
+curl -X POST "http://localhost:8085/api/v1/students/bulk" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "students": [
+      {
+        "firstName": "John",
+        "lastName": "Smith",
+        "email": "john.smith@university.edu",
+        "courseIds": [1, 2]
+      },
+      {
+        "firstName": "Jane",
+        "lastName": "Doe",
+        "email": "jane.doe@university.edu",
+        "courseIds": [1, 3]
+      },
+      {
+        "firstName": "Bob",
+        "lastName": "Johnson",
+        "email": "bob.johnson@university.edu",
+        "courseIds": [2, 4]
+      },
+      {
+        "firstName": "Alice",
+        "lastName": "Williams",
+        "email": "alice.williams@university.edu",
+        "courseIds": [3, 5]
+      },
+      {
+        "firstName": "Charlie",
+        "lastName": "Brown",
+        "email": "charlie.brown@university.edu",
+        "courseIds": [1, 4, 5]
+      }
+    ]
+  }'
+```
+
+#### Step 2: Search Courses
+
+The search endpoint searches across course **titles** and **descriptions** using BM25 ranking.
+
+**Example 1: Search for "computer science"**
+
+```bash
+curl -X GET "http://localhost:8085/api/v1/courses/search?q=computer%20science&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Expected Response:**
+
+```json
+[
+  {
+    "id": 1,
+    "code": "CS101",
+    "title": "Introduction to Computer Science",
+    "description": "Fundamentals of computer science, programming, and algorithms",
+    "studentIds": [1, 2, 5]
+  },
+  {
+    "id": 2,
+    "code": "CS201",
+    "title": "Data Structures and Algorithms",
+    "description": "Advanced data structures, trees, graphs, and algorithm design",
+    "studentIds": [1, 3]
+  }
+]
+```
+
+**What to Expect:**
+- Results are ranked by relevance (most relevant first)
+- "CS101" appears first because it contains "Computer Science" in the title
+- "CS201" appears second because it's related but doesn't have the exact phrase
+- Both courses match because they contain "computer" and "science" terms
+
+**Example 2: Search for "database"**
+
+```bash
+curl -X GET "http://localhost:8085/api/v1/courses/search?q=database&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Expected Response:**
+
+```json
+[
+  {
+    "id": 4,
+    "code": "DB301",
+    "title": "Database Systems",
+    "description": "Relational databases, SQL, query optimization, and database design",
+    "studentIds": [3, 5]
+  }
+]
+```
+
+**What to Expect:**
+- Only the "Database Systems" course matches
+- The word "database" appears multiple times in the description, which increases its relevance score
+- Results are limited to 10 by default (you can change this with the `limit` parameter)
+
+**Example 3: Search for "web"**
+
+```bash
+curl -X GET "http://localhost:8085/api/v1/courses/search?q=web&limit=5" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Expected Response:**
+
+```json
+[
+  {
+    "id": 5,
+    "code": "WEB401",
+    "title": "Web Development",
+    "description": "HTML, CSS, JavaScript, and modern web frameworks",
+    "studentIds": [4, 5]
+  }
+]
+```
+
+**What to Expect:**
+- Partial word matching works (searches for "web" will find "Web Development")
+- Case-insensitive search (you can search "WEB", "web", or "Web" and get the same results)
+
+**Example 4: Search with no matches**
+
+```bash
+curl -X GET "http://localhost:8085/api/v1/courses/search?q=quantum%20physics&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Expected Response:**
+
+```json
+[]
+```
+
+**What to Expect:**
+- Empty array when no courses match the search query
+- No error is returned - this is the expected behavior for no matches
+
+#### Step 3: Search Students
+
+The search endpoint searches across student **first names**, **last names**, and **email addresses**.
+
+**Example 1: Search for "john"**
+
+```bash
+curl -X GET "http://localhost:8085/api/v1/students/search?q=john&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Expected Response:**
+
+```json
+[
+  {
+    "id": 1,
+    "firstName": "John",
+    "lastName": "Smith",
+    "email": "john.smith@university.edu",
+    "courses": [
+      {
+        "id": 1,
+        "code": "CS101",
+        "title": "Introduction to Computer Science"
+      },
+      {
+        "id": 2,
+        "code": "CS201",
+        "title": "Data Structures and Algorithms"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "firstName": "Bob",
+    "lastName": "Johnson",
+    "email": "bob.johnson@university.edu",
+    "courses": [
+      {
+        "id": 2,
+        "code": "CS201",
+        "title": "Data Structures and Algorithms"
+      },
+      {
+        "id": 4,
+        "code": "DB301",
+        "title": "Database Systems"
+      }
+    ]
+  }
+]
+```
+
+**What to Expect:**
+- "John Smith" appears first (exact first name match)
+- "Bob Johnson" appears second (last name contains "john")
+- Both students' emails also contain "john", which contributes to the match
+- Results include the full student object with enrolled courses
+
+**Example 2: Search for "smith"**
+
+```bash
+curl -X GET "http://localhost:8085/api/v1/students/search?q=smith&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Expected Response:**
+
+```json
+[
+  {
+    "id": 1,
+    "firstName": "John",
+    "lastName": "Smith",
+    "email": "john.smith@university.edu",
+    "courses": [
+      {
+        "id": 1,
+        "code": "CS101",
+        "title": "Introduction to Computer Science"
+      },
+      {
+        "id": 2,
+        "code": "CS201",
+        "title": "Data Structures and Algorithms"
+      }
+    ]
+  }
+]
+```
+
+**What to Expect:**
+- Only "John Smith" matches (last name contains "smith")
+- The email also contains "smith", which helps with relevance scoring
+
+**Example 3: Search for email domain**
+
+```bash
+curl -X GET "http://localhost:8085/api/v1/students/search?q=university.edu&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Expected Response:**
+
+```json
+[
+  {
+    "id": 1,
+    "firstName": "John",
+    "lastName": "Smith",
+    "email": "john.smith@university.edu",
+    "courses": [...]
+  },
+  {
+    "id": 2,
+    "firstName": "Jane",
+    "lastName": "Doe",
+    "email": "jane.doe@university.edu",
+    "courses": [...]
+  },
+  {
+    "id": 3,
+    "firstName": "Bob",
+    "lastName": "Johnson",
+    "email": "bob.johnson@university.edu",
+    "courses": [...]
+  },
+  {
+    "id": 4,
+    "firstName": "Alice",
+    "lastName": "Williams",
+    "email": "alice.williams@university.edu",
+    "courses": [...]
+  },
+  {
+    "id": 5,
+    "firstName": "Charlie",
+    "lastName": "Brown",
+    "email": "charlie.brown@university.edu",
+    "courses": [...]
+  }
+]
+```
+
+**What to Expect:**
+- All students match because they all have "@university.edu" in their email
+- Results are still ranked by relevance (though in this case, all have similar scores)
+- The `limit` parameter controls how many results are returned (default is 20)
+
+#### Step 4: Understanding Search Behavior
+
+**Key Points:**
+
+1. **Relevance Ranking**: Results are automatically sorted by relevance using BM25 algorithm. Lower scores mean better matches.
+
+2. **Multi-field Search**: 
+   - Courses: Searches both title AND description
+   - Students: Searches first name, last name, AND email
+
+3. **Partial Matching**: You don't need exact phrases. Searching "comp" will find "Computer Science".
+
+4. **Case Insensitive**: Search is case-insensitive. "JOHN", "john", and "John" all return the same results.
+
+5. **Empty Queries**: If you pass an empty or whitespace-only query, you'll get an empty array `[]`.
+
+6. **Limit Parameter**: 
+   - Default: 20 results
+   - Maximum: No hard limit, but keep it reasonable (e.g., 100)
+   - Use smaller limits for better performance
+
+**Common Search Patterns:**
+
+```bash
+# Single word search
+GET /api/v1/courses/search?q=programming&limit=10
+
+# Multi-word search (searches for all terms)
+GET /api/v1/courses/search?q=computer%20science&limit=10
+
+# Search with custom limit
+GET /api/v1/students/search?q=smith&limit=5
+
+# URL encoding: spaces become %20, special characters are encoded
+# "computer science" → "computer%20science"
+```
+
+**What Gets Searched:**
+
+- **Courses**: `title + " " + description` (combined into `search_text` column)
+- **Students**: `first_name + " " + last_name + " " + email` (combined into `search_text` column)
+
+**Performance Notes:**
+
+- Search uses BM25 indexes for fast retrieval
+- Results are pre-ranked by the database
+- The `LIMIT` clause ensures only the top results are returned
+- Search indexes update automatically when data changes
+
+### Makefile Commands
+
+The Makefile includes convenient commands for managing the search-enabled stack:
+
+```bash
+make up-search    # Start the pg_textsearch stack
+make down-search  # Stop the pg_textsearch stack
+```
+
+### Troubleshooting
+
+**Issue**: Search endpoints return empty results
+
+- **Solution**: Ensure you're using `docker-compose-pg-search.yml` (not `compose.yml`)
+- **Solution**: Verify the migration `V2__enable_pg_textsearch.sql` ran successfully
+- **Solution**: Check that the `pg_textsearch` extension is enabled: `SELECT * FROM pg_extension WHERE extname = 'pg_textsearch';`
+
+**Issue**: Search queries are slow
+
+- **Solution**: Ensure BM25 indexes exist: `SELECT indexname FROM pg_indexes WHERE indexdef LIKE '%USING bm25%';`
+- **Solution**: Check query execution plan with `EXPLAIN` to verify index usage
+- **Solution**: For large datasets, consider creating indexes after data load
+
+**Issue**: Migration fails with "BM25 indexes on expressions are not supported"
+
+- **Solution**: This is already handled - the migration uses generated columns instead of expressions
 
 </details>
 
@@ -486,7 +1235,6 @@ app:
 
 - **Solution**: Use Spring profiles to configure different limits per environment
 
-
 </details>
 
 ## Rate Limiting Implementation Guide
@@ -691,14 +1439,14 @@ app:
       requests-per-minute: 50
 ```
 
-2. **Update RateLimitingConfig**:
+1. **Update RateLimitingConfig**:
 
 ```java
 @Value("${app.rate-limiting.new-category.requests-per-minute:50}")
 private int newCategoryRequestsPerMinute;
 ```
 
-3. **Add enum value** in `RateLimitingFilter`:
+1. **Add enum value** in `RateLimitingFilter`:
 
 ```java
 private enum EndpointCategory {
@@ -706,7 +1454,7 @@ private enum EndpointCategory {
 }
 ```
 
-4. **Update category detection**:
+1. **Update category detection**:
 
 ```java
 if (requestUri.startsWith("/api/v1/new-endpoint/")) {
@@ -751,14 +1499,14 @@ implementation 'com.bucket4j:bucket4j-redis:8.10.1'
 implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 ```
 
-2. **Update bucket storage** to use Redis:
+1. **Update bucket storage** to use Redis:
 
 ```java
 // Replace ConcurrentMap with Redis-backed storage
 private final RedisTemplate<String, Bucket> redisTemplate;
 ```
 
-3. **Configure Redis connection** in `application.yml`
+1. **Configure Redis connection** in `application.yml`
 
 ### Extension Points
 
@@ -1055,6 +1803,16 @@ The Jib configuration in `build.gradle` includes:
 
 ## Database Schema
 
+### Search Functionality
+
+The application uses generated columns and BM25 indexes for full-text search:
+
+- **courses.search_text**: Generated column combining `title` and `description`
+- **students.search_text**: Generated column combining `first_name`, `last_name`, and `email`
+- **BM25 Indexes**: Created on `search_text` columns for fast relevance-ranked search
+
+These are automatically created by Flyway migration `V2__enable_pg_textsearch.sql` when using the search-enabled Docker Compose setup.
+
 ### Entities
 
 #### UserAccount
@@ -1132,6 +1890,133 @@ The Jib configuration in `build.gradle` includes:
 - Default application port is `8085`
 - Change in `application.yml` if needed
 - Docker Compose uses port `8080` for the containerized app
+
+## New Relic
+
+<details>
+<summary>Click to open</summary>
+
+This project ships with the New Relic Java agent wired into the Gradle build and Jib image.
+The agent is loaded automatically when a license key is present.
+Configuration lives in `src/main/newrelic/newrelic.yml` and supports environment overrides.
+
+### 1) Get your New Relic license key
+
+- In New Relic, go to **API keys** and copy your **License key**.
+- Keep it out of git; use environment variables or `.env`.
+
+### 2) Provide environment variables
+
+Required:
+- `NEW_RELIC_LICENSE_KEY` (your license key)
+
+Optional:
+- `NEW_RELIC_APP_NAME` (defaults to `jib-pilot`)
+
+Example `.env`:
+
+```bash
+NEW_RELIC_LICENSE_KEY=YOUR_LICENSE_KEY
+NEW_RELIC_APP_NAME=jib-pilot
+```
+
+### 3) Run locally (bootRun)
+
+The `bootRun` task loads the agent only when `NEW_RELIC_LICENSE_KEY` is set.
+
+```bash
+export NEW_RELIC_LICENSE_KEY=YOUR_LICENSE_KEY
+export NEW_RELIC_APP_NAME=jib-pilot
+./gradlew bootRun
+```
+
+You should see the agent initialize in the logs and the app appear in New Relic APM.
+
+### 4) Run with Docker/Jib
+
+The Jib build copies the New Relic agent into the image and starts the JVM with
+`-javaagent:/newrelic/newrelic.jar`.
+
+```bash
+./gradlew jibDockerBuild
+docker compose up -d
+```
+
+Make sure `NEW_RELIC_LICENSE_KEY` is set in your environment or `.env` file before running Compose.
+
+### 5) Customize agent settings (optional)
+
+Edit `src/main/newrelic/newrelic.yml` to adjust:
+- `app_name` (static default)
+- log level
+- distributed tracing
+
+### Gradle wiring (what this project does)
+
+- Adds a `newrelicAgent` configuration to pull the official agent JAR.
+- `prepareNewRelicAgent` copies the agent to `build/newrelic/newrelic.jar` and overlays `src/main/newrelic/newrelic.yml`.
+- `bootRun` attaches `-javaagent` only when `NEW_RELIC_LICENSE_KEY` is present.
+- Jib tasks depend on the agent prep and run the container with `-javaagent:/newrelic/newrelic.jar`.
+
+</details>
+
+---
+
+<details>
+<summary>Commit Message Format</summary>
+
+```bash
+mkdir .githooks
+vim .githooks/commit-msg
+```
+
+```bash
+#!/usr/bin/env bash
+
+# Read the commit message
+COMMIT_MSG_FILE=$1
+SUBJECT=$(head -n 1 "$COMMIT_MSG_FILE")
+
+# Define validation regex patterns
+REGEX_ABC="^ABC-[0-9]+: .+"
+REGEX_LOVE="^[lL][oO][vV][eE]-[0-9]{4,9}[ :].+"
+
+# Check if the commit message matches any of the rules
+if [[ "$SUBJECT" =~ $REGEX_ABC ]] || \
+   [[ "$SUBJECT" =~ $REGEX_LOVE ]]; then
+    exit 0
+else
+    echo ""
+    echo "====================================================================="
+    echo "❌ ERROR: Invalid commit message format!"
+    echo "Your commit message: '$SUBJECT'"
+    echo ""
+    echo "Commit messages must start with one of the following team prefixes:"
+    echo "  1. ABC-####: custom message       (e.g., ABC-1234: login page)"
+    echo "  2. Love-#### custom message       (4 to 9 digits, case-insensitive)"
+    echo ===================================================================="
+    echo ""
+    exit 1
+fi
+```
+
+```bash
+chmod +x .githooks/commit-msg
+```
+
+**enforce the commit message format**
+
+```bash
+git config core.hooksPath .githooks
+```
+
+*turn off your custom commit message hook, reset the core.hooksPath setting*
+
+```bash
+git config --unset core.hooksPath
+```
+
+</details>
 
 ## License
 

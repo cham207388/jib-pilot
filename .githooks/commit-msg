@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+# Read the commit message
+COMMIT_MSG_FILE=$1
+SUBJECT=$(head -n 1 "$COMMIT_MSG_FILE")
+
+# Define validation regex patterns
+REGEX_ABC="^ABC-[0-9]+: .+"
+REGEX_LOVE="^[lL][oO][vV][eE]-[0-9]{4,9}[ :].+"
+
+# Check if the commit message matches any of the rules
+if [[ "$SUBJECT" =~ $REGEX_ABC ]] || \
+   [[ "$SUBJECT" =~ $REGEX_LOVE ]]; then
+    exit 0
+else
+    echo ""
+    echo "====================================================================="
+    echo "❌ ERROR: Invalid commit message format!"
+    echo "Your commit message: '$SUBJECT'"
+    echo ""
+    echo "Commit messages must start with one of the following team prefixes:"
+    echo "  1. ABC-####: custom message       (e.g., ABC-1234: login page)"
+    echo "  2. Love-#### custom message       (4 to 9 digits, case-insensitive)"
+    echo "====================================================================="
+    echo " "
+    exit 1
+fi

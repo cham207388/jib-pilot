@@ -691,7 +691,7 @@ Before running analysis, you need to generate an authentication token:
    Or on Windows (PowerShell):
 
    ```powershell
-   $env:SONAR_TOKEN="your_generated_token_here"
+   env:SONAR_TOKEN="your_generated_token_here"
    ```
 
    Or on Windows (CMD):

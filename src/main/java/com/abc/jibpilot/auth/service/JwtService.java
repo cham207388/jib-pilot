@@ -12,7 +12,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
-import java.util.Map;
+import java.util.HashMap;
 import java.util.function.Function;
 
 @Service
@@ -31,15 +31,18 @@ public class JwtService {
 
     public String generateToken(AppUserDetails user) {
         Instant now = Instant.now();
+        var claims = new HashMap<String, Object>();
+        claims.put("role", user.getRole().name());
+        claims.put("userId", user.getUserId());
+        if (user.getStudentId() != null) {
+            claims.put("studentId", user.getStudentId());
+        }
+
         return Jwts.builder()
                 .setSubject(user.getUsername())
                 .setIssuedAt(Date.from(now))
                 .setExpiration(Date.from(now.plusSeconds(expirationSeconds)))
-                .addClaims(Map.of(
-                        "role", user.getRole().name(),
-                        "studentId", user.getStudentId(),
-                        "userId", user.getUserId()
-                ))
+                .addClaims(claims)
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
     }

@@ -25,6 +25,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.postgres
+    command: ["postgres", "-c", "shared_preload_libraries=pg_textsearch"]
     restart: unless-stopped
     environment:
       POSTGRES_DB: jib_pilot

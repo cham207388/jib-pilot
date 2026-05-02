@@ -23,7 +23,7 @@ Jib Pilot is a modern, production-ready Spring Boot application that provides a 
 ## Technology Stack
 
 - **Framework**: Spring Boot 4.0.0
-- **Language**: Java 21
+- **Language**: Java 25
 - **Build Tool**: Gradle
 - **Database**: PostgreSQL 17 (production), H2 (testing)
 - **Search**: pg_textsearch extension for BM25-ranked full-text search
@@ -37,7 +37,7 @@ Jib Pilot is a modern, production-ready Spring Boot application that provides a 
 
 ## Prerequisites
 
-- **Java 21** or higher
+- **Java 25** or higher
 - **Docker** and **Docker Compose** (for containerized deployment)
 - **PostgreSQL 17 or 18** (required for pg_textsearch, optional if not using Docker Compose)
 - **Gradle** (optional, wrapper included)
